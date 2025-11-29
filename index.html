@@ -755,14 +755,14 @@
             }
           }
           
-          // AUTO-SAVE to Airtable
+          // AUTO-SAVE to Airtable (sub_category omitted - will be added later)
           $('loadingText').textContent = 'Saving to ToxEcology database...';
           const saveResult = await addProductToAirtable({
             barcode: product.barcode,
             name: product.name,
             brand: product.brand,
             category: product.category,
-            sub_category: product.sub_category || '',
+            sub_category: '',  // Leave blank to avoid single-select errors
             ingredients: product.ingredients || ''
           });
           
