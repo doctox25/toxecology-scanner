@@ -115,7 +115,7 @@ exports.handler = async (event, context) => {
       product_name: name.substring(0, 200),
       brand: brand.substring(0, 100),
       category: category,
-      sub_category: sub_category || '',
+      // sub_category omitted - causes single-select errors when value doesn't exist
       upc_barcode: barcode || '',
       ingredient_list_raw: (ingredients || '').substring(0, 5000),
       source: 'ToxEcology Scanner',
