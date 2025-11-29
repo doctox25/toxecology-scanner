@@ -225,11 +225,15 @@ exports.handler = async (event) => {
     const {
       product_id,
       product_name,
+      name,              // Frontend sends 'name'
       brand,
       category,
       sourceCategory,
+      sub_category,      // Frontend may send this directly
       upc_barcode,
+      barcode,           // Frontend sends 'barcode'
       ingredient_list_raw,
+      ingredients,       // Frontend sends 'ingredients'
       ingredientIds,
       domainMapIds,
       knobId,
@@ -237,17 +241,22 @@ exports.handler = async (event) => {
       source_url
     } = body;
 
-    if (!product_name) {
-      console.log('Error: product_name is required');
+    // Handle field name differences between frontend and Airtable
+    const finalProductName = product_name || name;
+    const finalBarcode = upc_barcode || barcode;
+    const finalIngredients = ingredient_list_raw || ingredients;
+
+    if (!finalProductName) {
+      console.log('Error: product_name/name is required');
       return { statusCode: 400, headers, body: JSON.stringify({ error: 'product_name is required' }) };
     }
 
     // Check for duplicate by barcode
-    if (upc_barcode) {
-      console.log('Checking for duplicate barcode:', upc_barcode);
+    if (finalBarcode) {
+      console.log('Checking for duplicate barcode:', finalBarcode);
       const checkOptions = {
         hostname: 'api.airtable.com',
-        path: `/v0/${AIRTABLE_BASE_ID}/products_exposures?filterByFormula={upc_barcode}="${upc_barcode}"`,
+        path: `/v0/${AIRTABLE_BASE_ID}/products_exposures?filterByFormula={upc_barcode}="${finalBarcode}"`,
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${AIRTABLE_API_KEY}`,
@@ -274,8 +283,8 @@ exports.handler = async (event) => {
     // Classify sub_category
     const classifiedSubCategory = classifySubCategory({
       category: category || 'Personal Care',
-      sourceCategory: sourceCategory,
-      productName: product_name,
+      sourceCategory: sourceCategory || sub_category,
+      productName: finalProductName,
       source: source
     });
     const validSubCategory = validateSubCategory(classifiedSubCategory);
@@ -284,11 +293,11 @@ exports.handler = async (event) => {
     // Build the record
     const fields = {
       product_id: product_id || `SCAN-${Date.now()}`,
-      product_name: product_name,
+      product_name: finalProductName,
       brand: brand || 'Unknown Brand',
       category: category || 'Personal Care',
-      upc_barcode: upc_barcode || '',
-      ingredient_list_raw: ingredient_list_raw || '',
+      upc_barcode: finalBarcode || '',
+      ingredient_list_raw: finalIngredients || '',
       source: source || 'ToxEcology Scanner',
       source_url: source_url || 'https://scanner.toxecology.com',
       date_added: new Date().toISOString().split('T')[0]
