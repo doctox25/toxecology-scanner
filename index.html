@@ -740,15 +740,42 @@
       if (product) {
         currentProductData = product;
         
-        // If from external source, try to match ingredients against our database
-        if (product.sourceType === 'external' && product.ingredients) {
-          $('loadingText').textContent = 'Analyzing ingredients...';
-          const ingredientMatch = await matchIngredients(product.ingredients);
-          if (ingredientMatch && ingredientMatch.hazardScore !== undefined) {
-            product.hazardScore = ingredientMatch.hazardScore;
-            product.domains = ingredientMatch.domains;
-            product.matchedCount = ingredientMatch.matchedCount;
-            product.concerns = ingredientMatch.concerns;
+        // If from external source, match ingredients and AUTO-SAVE to Airtable
+        if (product.sourceType === 'external') {
+          
+          // Match ingredients against our database
+          if (product.ingredients) {
+            $('loadingText').textContent = 'Analyzing ingredients...';
+            const ingredientMatch = await matchIngredients(product.ingredients);
+            if (ingredientMatch && ingredientMatch.hazardScore !== undefined) {
+              product.hazardScore = ingredientMatch.hazardScore;
+              product.domains = ingredientMatch.domains;
+              product.matchedCount = ingredientMatch.matchedCount;
+              product.concerns = ingredientMatch.concerns;
+            }
+          }
+          
+          // AUTO-SAVE to Airtable
+          $('loadingText').textContent = 'Saving to ToxEcology database...';
+          const saveResult = await addProductToAirtable({
+            barcode: product.barcode,
+            name: product.name,
+            brand: product.brand,
+            category: product.category,
+            sub_category: product.sub_category || '',
+            ingredients: product.ingredients || ''
+          });
+          
+          if (saveResult.success) {
+            console.log('Auto-saved product:', saveResult.product_id);
+            product.autoSaved = true;
+            product.savedProductId = saveResult.product_id;
+          } else {
+            console.log('Auto-save skipped or failed:', saveResult.error);
+            // Don't block display if save fails (might be duplicate)
+            if (saveResult.error && saveResult.error.includes('already exists')) {
+              product.alreadyInDatabase = true;
+            }
           }
         }
         
@@ -782,6 +809,12 @@
       if (product.sourceType === 'airtable') {
         badgeClass = 'airtable';
         badgeText = '✓ ToxEcology Database';
+      } else if (product.autoSaved) {
+        badgeClass = 'airtable';
+        badgeText = '✓ Added to ToxEcology Database';
+      } else if (product.alreadyInDatabase) {
+        badgeClass = 'airtable';
+        badgeText = '✓ Already in Database';
       }
       $('sourceBadge').innerHTML = `<span class="source-badge ${badgeClass}">${badgeText}</span>`;
 
