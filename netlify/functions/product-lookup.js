@@ -70,7 +70,7 @@ async function saveToAirtable(product, hazardData) {
     brand: product.brand || 'Unknown',
     category: product.category || 'Unknown',
     sub_category: product.subCategory || 'General',
-    upc_barcode: product.barcode,
+    upc_barcode: parseInt(product.barcode, 10),
     ingredient_list_raw: product.ingredients,
     source: product.source,
     date_added: new Date().toISOString().split('T')[0],
@@ -94,7 +94,11 @@ async function saveToAirtable(product, hazardData) {
       body: JSON.stringify({ fields })
     });
     
-    if (!response.ok) return null;
+    if (!response.ok) {
+  const errorText = await response.text();
+  console.error('Airtable save failed:', response.status, errorText);
+  return null;
+}
     
     const data = await response.json();
     return { airtableId: data.id, productId };
