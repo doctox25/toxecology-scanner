@@ -70,7 +70,7 @@ async function saveToAirtable(product, hazardData) {
     brand: product.brand || 'Unknown',
     category: product.category || 'Unknown',
     sub_category: product.subCategory || 'General',
-    upc_barcode: parseInt(product.barcode, 10),
+    upc_barcode: product.barcode,
     ingredient_list_raw: product.ingredients,
     source: product.source,
     date_added: new Date().toISOString().split('T')[0],
