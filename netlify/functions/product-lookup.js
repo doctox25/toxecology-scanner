@@ -62,7 +62,6 @@ async function saveToAirtable(product, hazardData) {
     product_name: product.name,
     brand: product.brand || 'Unknown',
     category: product.category || 'Unknown',
-    sub_category: 'General',
     upc_barcode: product.barcode,
     ingredient_list_raw: product.ingredients,
     source: product.source,
