@@ -110,3 +110,495 @@
         .product-brand { font-size: 12px; color: rgba(255,255,255,0.5); text-transform: uppercase; margin-bottom: 4px; }
         .product-name { font-size: 20px; font-weight: 700; line-height: 1.3; margin-bottom: 8px; }
         .product-category { font-size: 13px; color: #00D9FF; }
+        
+        .score-circle {
+            width: 80px; height: 80px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            position: relative;
+        }
+        .score-inner {
+            width: 64px; height: 64px;
+            border-radius: 50%;
+            background: #0A1628;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+        }
+        .score-value { font-size: 24px; font-weight: 800; }
+        .score-label { font-size: 9px; color: rgba(255,255,255,0.5); text-transform: uppercase; }
+        
+        .hazard-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 16px;
+            border-radius: 10px;
+            margin-bottom: 16px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .hazard-high { background: rgba(255,68,68,0.2); color: #FF4444; }
+        .hazard-moderate { background: rgba(255,170,0,0.2); color: #FFAA00; }
+        .hazard-low { background: rgba(0,204,102,0.2); color: #00CC66; }
+        
+        .domain-tags { display: flex; flex-wrap: wrap; gap: 8px; }
+        .domain-tag {
+            padding: 8px 12px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 8px;
+            display: flex; align-items: center; gap: 6px;
+            font-size: 11px; text-transform: uppercase;
+        }
+        .domain-tag.elevated { background: rgba(255,68,68,0.15); color: #FF4444; }
+        
+        .ingredients-section {
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+        .ingredients-label { font-size: 11px; color: rgba(255,255,255,0.5); text-transform: uppercase; margin-bottom: 8px; }
+        .ingredient-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+        .ingredient-tag {
+            padding: 4px 8px;
+            background: rgba(255,68,68,0.1);
+            border-radius: 4px;
+            font-size: 11px;
+            color: #FF4444;
+        }
+        
+        /* New Product Badge */
+        .new-badge {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 16px;
+            background: linear-gradient(135deg, rgba(204,255,0,0.15) 0%, rgba(0,217,255,0.08) 100%);
+            border-radius: 12px;
+            margin-bottom: 16px;
+            border: 1px solid rgba(204,255,0,0.3);
+        }
+        .new-badge-icon { font-size: 20px; }
+        .new-badge-title { font-size: 14px; font-weight: 600; color: #CCFF00; }
+        .new-badge-subtitle { font-size: 12px; color: rgba(255,255,255,0.6); }
+        
+        /* Recommendations */
+        .recs-section {
+            background: linear-gradient(135deg, rgba(204,255,0,0.1) 0%, rgba(0,204,102,0.05) 100%);
+            border-radius: 20px;
+            padding: 24px;
+            border: 2px solid rgba(204,255,0,0.2);
+            margin-bottom: 16px;
+        }
+        .recs-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+        .recs-icon {
+            width: 44px; height: 44px;
+            background: #CCFF00;
+            border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 22px;
+        }
+        .recs-title { font-size: 18px; font-weight: 700; color: #CCFF00; }
+        .recs-subtitle { font-size: 13px; color: rgba(255,255,255,0.6); }
+        
+        .rec-card {
+            background: rgba(255,255,255,0.05);
+            border-radius: 14px;
+            padding: 18px;
+            margin-bottom: 12px;
+        }
+        .rec-card:last-child { margin-bottom: 0; }
+        .rec-card.top-pick { border: 2px solid rgba(204,255,0,0.4); }
+        .top-pick-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            background: #CCFF00;
+            color: #0A1628;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+        .rec-header { display: flex; justify-content: space-between; }
+        .rec-brand { font-size: 11px; color: rgba(255,255,255,0.5); margin-bottom: 4px; }
+        .rec-name { font-size: 15px; font-weight: 600; }
+        .rec-improvement {
+            padding: 8px 12px;
+            background: rgba(0,204,102,0.2);
+            border-radius: 8px;
+            text-align: center;
+        }
+        .rec-improvement-value { font-size: 18px; font-weight: 800; color: #00CC66; }
+        .rec-reason { font-size: 13px; color: rgba(255,255,255,0.6); margin-top: 12px; }
+        
+        /* Good Choice */
+        .good-choice {
+            background: rgba(0,204,102,0.1);
+            border-radius: 16px;
+            padding: 20px;
+            border: 1px solid rgba(0,204,102,0.2);
+            text-align: center;
+            margin-bottom: 16px;
+        }
+        .good-choice-icon { font-size: 32px; margin-bottom: 12px; }
+        .good-choice-title { font-size: 16px; font-weight: 600; color: #00CC66; margin-bottom: 8px; }
+        .good-choice-text { font-size: 14px; color: rgba(255,255,255,0.6); }
+        
+        /* Not Found */
+        .not-found { text-align: center; padding: 32px 24px; }
+        .not-found-icon {
+            width: 72px; height: 72px;
+            background: rgba(255,170,0,0.15);
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 20px;
+            font-size: 32px;
+        }
+        .not-found-title { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
+        .not-found-text { font-size: 14px; color: rgba(255,255,255,0.6); margin-bottom: 24px; }
+        
+        /* Buttons */
+        .btn-secondary {
+            width: 100%;
+            padding: 16px;
+            background: transparent;
+            color: #00D9FF;
+            border: 2px solid #00D9FF;
+            border-radius: 14px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 16px;
+        }
+        
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 32px 0 16px;
+            color: rgba(255,255,255,0.25);
+            font-size: 12px;
+        }
+        .footer svg { width: 24px; height: 24px; margin-bottom: 8px; }
+        
+        /* Hidden */
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo">
+                <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                    <g fill="none" stroke="#FFFFFF" stroke-width="8" stroke-linecap="round">
+                        <path d="M 70 15 A 40 40 0 0 1 85 30"/>
+                        <path d="M 90 45 A 40 40 0 0 1 90 55"/>
+                        <path d="M 85 70 A 40 40 0 0 1 70 85"/>
+                        <path d="M 55 90 A 40 40 0 0 1 45 90"/>
+                        <path d="M 30 85 A 40 40 0 0 1 15 70"/>
+                        <path d="M 10 55 A 40 40 0 0 1 10 45"/>
+                        <path d="M 15 30 A 40 40 0 0 1 30 15"/>
+                        <path d="M 45 10 A 40 40 0 0 1 55 10"/>
+                    </g>
+                    <g fill="none" stroke="#FFFFFF" stroke-width="6" stroke-linecap="round">
+                        <path d="M 35 25 A 28 28 0 0 1 65 25"/>
+                        <path d="M 75 35 A 28 28 0 0 1 75 65"/>
+                        <path d="M 65 75 A 28 28 0 0 1 35 75"/>
+                        <path d="M 25 65 A 28 28 0 0 1 25 35"/>
+                    </g>
+                </svg>
+                <span class="logo-text">ToxEcology</span>
+            </div>
+            <p class="tagline">Product Scanner</p>
+        </header>
+
+        <!-- Input Section -->
+        <section id="inputSection" class="input-section">
+            <input type="text" id="barcodeInput" class="barcode-input" placeholder="Enter barcode..." maxlength="14">
+            <button id="lookupBtn" class="lookup-btn" disabled>🔍 Look Up Product</button>
+            
+            <div class="demo-section">
+                <p class="demo-label">Try these barcodes:</p>
+                <div class="demo-buttons">
+                    <button class="demo-btn" data-barcode="3017624010701">🍫 Nutella</button>
+                    <button class="demo-btn" data-barcode="5000159407236">🥤 Coca-Cola</button>
+                    <button class="demo-btn" data-barcode="3600523735099">🧴 Garnier</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Loading -->
+        <section id="loadingSection" class="input-section hidden">
+            <div class="loading">
+                <svg viewBox="0 0 100 100" style="width:56px;height:56px;margin-bottom:12px">
+                    <g fill="none" stroke="#00D9FF" stroke-width="8" stroke-linecap="round">
+                        <path d="M 70 15 A 40 40 0 0 1 85 30"/>
+                        <path d="M 90 45 A 40 40 0 0 1 90 55"/>
+                        <path d="M 85 70 A 40 40 0 0 1 70 85"/>
+                        <path d="M 55 90 A 40 40 0 0 1 45 90"/>
+                        <path d="M 30 85 A 40 40 0 0 1 15 70"/>
+                        <path d="M 10 55 A 40 40 0 0 1 10 45"/>
+                        <path d="M 15 30 A 40 40 0 0 1 30 15"/>
+                        <path d="M 45 10 A 40 40 0 0 1 55 10"/>
+                    </g>
+                </svg>
+                <div class="spinner"></div>
+                <p id="loadingText" class="loading-text">Looking up product...</p>
+            </div>
+        </section>
+
+        <!-- Results -->
+        <section id="resultsSection" class="hidden"></section>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                <g fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="8" stroke-linecap="round">
+                    <path d="M 70 15 A 40 40 0 0 1 85 30"/>
+                    <path d="M 90 45 A 40 40 0 0 1 90 55"/>
+                    <path d="M 85 70 A 40 40 0 0 1 70 85"/>
+                    <path d="M 55 90 A 40 40 0 0 1 45 90"/>
+                </g>
+            </svg>
+            <p>v2.1.0 • Precision Detox Intelligence</p>
+        </footer>
+    </div>
+
+    <script>
+        // Elements
+        const inputSection = document.getElementById('inputSection');
+        const loadingSection = document.getElementById('loadingSection');
+        const resultsSection = document.getElementById('resultsSection');
+        const barcodeInput = document.getElementById('barcodeInput');
+        const lookupBtn = document.getElementById('lookupBtn');
+        const loadingText = document.getElementById('loadingText');
+
+        // Enable/disable button based on input
+        barcodeInput.addEventListener('input', (e) => {
+            e.target.value = e.target.value.replace(/\D/g, '');
+            lookupBtn.disabled = e.target.value.length < 8;
+        });
+
+        // Enter key triggers lookup
+        barcodeInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !lookupBtn.disabled) lookupProduct();
+        });
+
+        // Lookup button click
+        lookupBtn.addEventListener('click', lookupProduct);
+
+        // Demo buttons
+        document.querySelectorAll('.demo-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                barcodeInput.value = btn.dataset.barcode;
+                lookupBtn.disabled = false;
+                lookupProduct();
+            });
+        });
+
+        // Main lookup function
+        async function lookupProduct() {
+            const barcode = barcodeInput.value.trim();
+            if (barcode.length < 8) return;
+
+            // Show loading
+            inputSection.classList.add('hidden');
+            loadingSection.classList.remove('hidden');
+            resultsSection.classList.add('hidden');
+            loadingText.textContent = 'Looking up product...';
+
+            try {
+                // Call product lookup API
+                const response = await fetch(`/.netlify/functions/product-lookup?upc=${barcode}`);
+                const data = await response.json();
+
+                if (!data.success) {
+                    showNotFound(barcode);
+                    return;
+                }
+
+                const product = data.product;
+                let substitutions = [];
+
+                // Get recommendations if high hazard
+                if (product.hazardScore >= 50) {
+                    loadingText.textContent = 'Finding safer alternatives...';
+                    try {
+                        const recsResponse = await fetch(
+                            `/.netlify/functions/product-recommendations?productId=${product.id}&category=${product.category}&subCategory=${product.subCategory}`
+                        );
+                        const recsData = await recsResponse.json();
+                        if (recsData.success) {
+                            substitutions = recsData.substitutions || [];
+                        }
+                    } catch (e) {
+                        console.log('No recommendations available');
+                    }
+                }
+
+                showResults(product, substitutions);
+
+            } catch (error) {
+                console.error('Lookup error:', error);
+                showNotFound(barcode);
+            }
+        }
+
+        // Show results
+        function showResults(product, substitutions) {
+            const hazardColor = product.hazardScore >= 50 ? '#FF4444' : 
+                               product.hazardScore >= 30 ? '#FFAA00' : '#00CC66';
+            const hazardClass = product.hazardScore >= 50 ? 'hazard-high' : 
+                               product.hazardScore >= 30 ? 'hazard-moderate' : 'hazard-low';
+            const hazardEmoji = product.hazardScore >= 50 ? '🚨' : 
+                               product.hazardScore >= 30 ? '⚠️' : '✅';
+
+            let html = '';
+
+            // New product badge
+            if (product.isNew) {
+                html += `
+                    <div class="new-badge">
+                        <span class="new-badge-icon">✨</span>
+                        <div>
+                            <div class="new-badge-title">New Product Added!</div>
+                            <div class="new-badge-subtitle">Added from ${product.source}</div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Main product card
+            html += `
+                <div class="result-card" style="border: 2px solid ${hazardColor}40">
+                    <div class="result-header">
+                        <div class="product-info">
+                            <p class="product-brand">${product.brand || 'Unknown Brand'}</p>
+                            <h2 class="product-name">${product.name || 'Unknown Product'}</h2>
+                            <p class="product-category">${product.category || ''} • ${product.subCategory || ''}</p>
+                        </div>
+                        <div class="score-circle" style="background: conic-gradient(${hazardColor} ${product.hazardScore}%, rgba(255,255,255,0.1) 0)">
+                            <div class="score-inner">
+                                <span class="score-value" style="color:${hazardColor}">${product.hazardScore}</span>
+                                <span class="score-label">Hazard</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="hazard-badge ${hazardClass}">
+                        <span>${hazardEmoji}</span>
+                        <span>${product.hazardLevel} Hazard</span>
+                    </div>
+
+                    ${renderDomainTags(product.domainScores)}
+                    ${renderIngredients(product.matchedIngredients)}
+                </div>
+            `;
+
+            // Recommendations
+            if (substitutions.length > 0) {
+                html += `
+                    <div class="recs-section">
+                        <div class="recs-header">
+                            <div class="recs-icon">🔄</div>
+                            <div>
+                                <div class="recs-title">Switch to Safer</div>
+                                <div class="recs-subtitle">${substitutions.length} better alternative${substitutions.length > 1 ? 's' : ''} found</div>
+                            </div>
+                        </div>
+                        ${substitutions.map((sub, i) => `
+                            <div class="rec-card ${i === 0 ? 'top-pick' : ''}">
+                                ${i === 0 ? '<div class="top-pick-badge">⭐ Top Pick</div>' : ''}
+                                <div class="rec-header">
+                                    <div>
+                                        <p class="rec-brand">${sub.alternativeBrand || ''}</p>
+                                        <p class="rec-name">${sub.alternativeName || 'Safer Alternative'}</p>
+                                    </div>
+                                    <div class="rec-improvement">
+                                        <div class="rec-improvement-value">-${sub.improvementPercentage || 0}%</div>
+                                    </div>
+                                </div>
+                                ${sub.reasonForSwap ? `<p class="rec-reason">${sub.reasonForSwap}</p>` : ''}
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            }
+
+            // Good choice message (low hazard, not new)
+            if (product.hazardScore < 50 && !product.isNew) {
+                html += `
+                    <div class="good-choice">
+                        <div class="good-choice-icon">✅</div>
+                        <div class="good-choice-title">Good Choice!</div>
+                        <p class="good-choice-text">This product has a low hazard score.</p>
+                    </div>
+                `;
+            }
+
+            // Scan another button
+            html += `<button class="btn-secondary" onclick="resetScanner()">← Scan Another Product</button>`;
+
+            resultsSection.innerHTML = html;
+            loadingSection.classList.add('hidden');
+            resultsSection.classList.remove('hidden');
+        }
+
+        function renderDomainTags(domainScores) {
+            if (!domainScores) return '';
+            const domains = Object.entries(domainScores)
+                .filter(([_, score]) => score > 0)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 4);
+            
+            if (domains.length === 0) return '';
+
+            const icons = { vocs: '💨', phthalates: '🧴', parabens: '🧪', pfas: '💧', metals: '⚙️', pesticides: '🌾', mycotoxins: '🍄', plastics: '♻️' };
+            
+            return `
+                <div class="domain-tags">
+                    ${domains.map(([domain, score]) => `
+                        <div class="domain-tag ${score > 40 ? 'elevated' : ''}">
+                            <span>${icons[domain] || '🔬'}</span>
+                            <span>${domain}</span>
+                            <strong>${score}</strong>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        function renderIngredients(matched) {
+            if (!matched || matched.length === 0) return '';
+            return `
+                <div class="ingredients-section">
+                    <p class="ingredients-label">Concerns Found:</p>
+                    <div class="ingredient-tags">
+                        ${matched.slice(0, 5).map(ing => `<span class="ingredient-tag">${ing.name}</span>`).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function showNotFound(barcode) {
+            resultsSection.innerHTML = `
+                <div class="input-section not-found">
+                    <div class="not-found-icon">🔍</div>
+                    <h3 class="not-found-title">Product Not Found</h3>
+                    <p class="not-found-text">Barcode ${barcode} isn't in any database yet.</p>
+                    <button class="btn-secondary" onclick="resetScanner()">← Try Another Barcode</button>
+                </div>
+            `;
+            loadingSection.classList.add('hidden');
+            resultsSection.classList.remove('hidden');
+        }
+
+        function resetScanner() {
+            barcodeInput.value = '';
+            lookupBtn.disabled = true;
+            resultsSection.classList.add('hidden');
+            inputSection.classList.remove('hidden');
+            barcodeInput.focus();
+        }
+    </script>
+</body>
+</html>
