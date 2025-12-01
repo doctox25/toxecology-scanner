@@ -74,7 +74,7 @@ async function saveToAirtable(product, hazardData) {
     ingredient_list_raw: product.ingredients,
     source: product.source,
     date_added: new Date().toISOString().split('T')[0],
-    hazard_score_0_100: hazardData.hazard_score,
+    hazard_score_0_100: Math.round(hazardData.hazard_score),
     hazard_level: hazardData.hazard_level,
     parabens_hazard_Score: hazardData.domain_scores?.parabens || 0,
     phthalates_hazard_Score: hazardData.domain_scores?.phthalates || 0,
