@@ -111,7 +111,7 @@ This saves just the basic product info. The hazard scores will still be returned
 async function lookupOpenFoodFacts(barcode) {
   try {
     const response = await fetch(
-      `https://world.openfoodfacts.org/api/v2/product/${barcode}?fields=product_name,brands,ingredients_text,categories,image_url`,
+      `https://world.openfoodfacts.org/api/v0/product/${barcode}.json`,
       { headers: { 'User-Agent': 'ToxEcology/3.0 (contact@toxecology.com)' } }
     );
     
@@ -139,7 +139,15 @@ async function lookupOpenFoodFacts(barcode) {
 async function lookupOpenBeautyFacts(barcode) {
   try {
     const response = await fetch(
-      `https://world.openbeautyfacts.org/api/v2/product/${barcode}?fields=product_name,brands,ingredients_text,categories,image_url`,
+     `https://world.openbeautyfacts.org/api/v0/product/${barcode}.json`,
+```
+
+---
+
+**Commit and test with:**
+```
+038000138416
+
       { headers: { 'User-Agent': 'ToxEcology/3.0 (contact@toxecology.com)' } }
     );
     
