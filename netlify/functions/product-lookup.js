@@ -64,7 +64,7 @@ async function saveToAirtable(product, hazardData) {
   const prefix = product.category === 'Food' ? 'FD' : 'CP';
   const productId = `${prefix}-${Date.now().toString().slice(-6)}`;
   
-  const fields = {
+const fields = {
     product_id: productId,
     product_name: product.name,
     brand: product.brand || 'Unknown',
@@ -73,16 +73,15 @@ async function saveToAirtable(product, hazardData) {
     upc_barcode: product.barcode,
     ingredient_list_raw: product.ingredients,
     source: product.source,
-    date_added: new Date().toISOString().split('T')[0],
-    hazard_score_0_100: Math.round(hazardData.hazard_score),
-    hazard_level: hazardData.hazard_level,
-    parabens_hazard_Score: hazardData.domain_scores?.parabens || 0,
-    phthalates_hazard_Score: hazardData.domain_scores?.phthalates || 0,
-    voc_hazard_Score: hazardData.domain_scores?.vocs || 0,
-    metals_hazard_Score: hazardData.domain_scores?.metals || 0,
-    PFAS_hazard_Score: hazardData.domain_scores?.pfas || 0,
-    pesticides_hazard_Score: hazardData.domain_scores?.pesticides || 0
+    date_added: new Date().toISOString().split('T')[0]
   };
+```
+
+This saves just the basic product info. The hazard scores will still be returned to users from Claude - they just won't be saved to Airtable (your existing formulas handle that through ingredient linking).
+
+**Commit and test with this barcode:**
+```
+5449000000996
   
   try {
     const response = await fetch(url, {
