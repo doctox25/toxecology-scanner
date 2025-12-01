@@ -64,7 +64,7 @@ async function saveToAirtable(product, hazardData) {
   const prefix = product.category === 'Food' ? 'FD' : 'CP';
   const productId = `${prefix}-${Date.now().toString().slice(-6)}`;
   
-const fields = {
+  const fields = {
     product_id: productId,
     product_name: product.name,
     brand: product.brand || 'Unknown',
@@ -75,13 +75,6 @@ const fields = {
     source: product.source,
     date_added: new Date().toISOString().split('T')[0]
   };
-```
-
-This saves just the basic product info. The hazard scores will still be returned to users from Claude - they just won't be saved to Airtable (your existing formulas handle that through ingredient linking).
-
-**Commit and test with this barcode:**
-```
-5449000000996
   
   try {
     const response = await fetch(url, {
@@ -94,10 +87,10 @@ This saves just the basic product info. The hazard scores will still be returned
     });
     
     if (!response.ok) {
-  const errorText = await response.text();
-  console.error('Airtable save failed:', response.status, errorText);
-  return null;
-}
+      const errorText = await response.text();
+      console.error('Airtable save failed:', response.status, errorText);
+      return null;
+    }
     
     const data = await response.json();
     return { airtableId: data.id, productId };
@@ -139,15 +132,7 @@ async function lookupOpenFoodFacts(barcode) {
 async function lookupOpenBeautyFacts(barcode) {
   try {
     const response = await fetch(
-     `https://world.openbeautyfacts.org/api/v0/product/${barcode}.json`,
-```
-
----
-
-**Commit and test with:**
-```
-038000138416
-
+      `https://world.openbeautyfacts.org/api/v0/product/${barcode}.json`,
       { headers: { 'User-Agent': 'ToxEcology/3.0 (contact@toxecology.com)' } }
     );
     
@@ -331,3 +316,8 @@ exports.handler = async (event) => {
     };
   }
 };
+```
+
+**Commit and test with:**
+```
+038000138416
