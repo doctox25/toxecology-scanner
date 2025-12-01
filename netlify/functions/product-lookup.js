@@ -1,11 +1,6 @@
-const Anthropic = require('@anthropic-ai/sdk');
-
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY
-});
-
 const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY;
 const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID;
+const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const PRODUCTS_TABLE = 'products_exposures';
 
 // Search Airtable for existing product
@@ -156,7 +151,7 @@ async function lookupOpenBeautyFacts(barcode) {
   }
 }
 
-// Score ingredients with Claude AI
+// Score ingredients with Claude AI (using fetch, no SDK)
 async function scoreWithClaude(ingredientsList, productName, category) {
   const prompt = `Analyze this product for toxin hazards.
 
@@ -184,13 +179,27 @@ Scoring: 0-25 Low, 26-50 Moderate, 51-75 High, 76-100 Very High.
 "Fragrance" warrants phthalates score of 30-50 due to undisclosed ingredients.`;
 
   try {
-    const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 1000,
-      messages: [{ role: 'user', content: prompt }]
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        messages: [{ role: 'user', content: prompt }]
+      })
     });
     
-    const text = response.content[0].text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+    if (!response.ok) {
+      console.error('Claude API error:', response.status);
+      throw new Error('Claude API failed');
+    }
+    
+    const data = await response.json();
+    const text = data.content[0].text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
     return JSON.parse(text);
   } catch (error) {
     console.error('Claude scoring error:', error);
