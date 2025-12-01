@@ -326,7 +326,3 @@ exports.handler = async (event) => {
   }
 };
 ```
-
-**Commit and test with:**
-```
-038000138416
