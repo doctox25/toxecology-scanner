@@ -3,7 +3,6 @@ const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID;
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const PRODUCTS_TABLE = 'products_exposures';
 
-// Search Airtable for existing product
 async function searchAirtable(barcode) {
   const url = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${PRODUCTS_TABLE}?filterByFormula={upc_barcode}="${barcode}"`;
   
@@ -52,7 +51,6 @@ async function searchAirtable(barcode) {
   }
 }
 
-// Save new product to Airtable
 async function saveToAirtable(product, hazardData) {
   const url = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${PRODUCTS_TABLE}`;
   
@@ -95,7 +93,6 @@ async function saveToAirtable(product, hazardData) {
   }
 }
 
-// Lookup Open Food Facts
 async function lookupOpenFoodFacts(barcode) {
   try {
     const response = await fetch(
@@ -113,7 +110,7 @@ async function lookupOpenFoodFacts(barcode) {
       brand: data.product.brands || 'Unknown Brand',
       ingredients: data.product.ingredients_text || null,
       category: 'Food',
-      subCategory: data.product.categories?.split(',')[0] || 'General',
+      subCategory: data.product.categories ? data.product.categories.split(',')[0] : 'General',
       imageUrl: data.product.image_url || null,
       barcode: barcode
     };
@@ -123,7 +120,6 @@ async function lookupOpenFoodFacts(barcode) {
   }
 }
 
-// Lookup Open Beauty Facts
 async function lookupOpenBeautyFacts(barcode) {
   try {
     const response = await fetch(
@@ -141,7 +137,7 @@ async function lookupOpenBeautyFacts(barcode) {
       brand: data.product.brands || 'Unknown Brand',
       ingredients: data.product.ingredients_text || null,
       category: 'Personal Care',
-      subCategory: data.product.categories?.split(',')[0] || 'General',
+      subCategory: data.product.categories ? data.product.categories.split(',')[0] : 'General',
       imageUrl: data.product.image_url || null,
       barcode: barcode
     };
@@ -151,7 +147,6 @@ async function lookupOpenBeautyFacts(barcode) {
   }
 }
 
-// Score ingredients with Claude AI (using fetch, no SDK)
 async function scoreWithClaude(ingredientsList, productName, category) {
   const prompt = `Analyze this product for toxin hazards.
 
@@ -214,7 +209,6 @@ Scoring: 0-25 Low, 26-50 Moderate, 51-75 High, 76-100 Very High.
   }
 }
 
-// Main handler
 exports.handler = async (event) => {
   const headers = {
     'Access-Control-Allow-Origin': '*',
@@ -237,13 +231,12 @@ exports.handler = async (event) => {
     };
   }
   
-  console.log(`[Scanner v3.0] Looking up: ${barcode}`);
+  console.log('[Scanner v3.0] Looking up: ' + barcode);
   
   try {
-    // Step 1: Check Airtable
     const cached = await searchAirtable(barcode);
     if (cached && cached.hasHazardScore) {
-      console.log(`[Scanner v3.0] Found in Airtable: ${cached.name}`);
+      console.log('[Scanner v3.0] Found in Airtable: ' + cached.name);
       return {
         statusCode: 200,
         headers,
@@ -251,29 +244,25 @@ exports.handler = async (event) => {
       };
     }
     
-    // Step 2: Check Open Food Facts
     let product = await lookupOpenFoodFacts(barcode);
     
-    // Step 3: Check Open Beauty Facts
     if (!product) {
       product = await lookupOpenBeautyFacts(barcode);
     }
     
-    // Not found anywhere
     if (!product) {
       return {
         statusCode: 404,
         headers,
-        body: JSON.stringify({ success: false, error: 'Product not found', barcode })
+        body: JSON.stringify({ success: false, error: 'Product not found', barcode: barcode })
       };
     }
     
-    console.log(`[Scanner v3.0] Found: ${product.name} (${product.source})`);
+    console.log('[Scanner v3.0] Found: ' + product.name + ' (' + product.source + ')');
     
-    // Step 4: Score with Claude
     let hazardData;
     if (product.ingredients) {
-      console.log(`[Scanner v3.0] Scoring with Claude...`);
+      console.log('[Scanner v3.0] Scoring with Claude...');
       hazardData = await scoreWithClaude(product.ingredients, product.name, product.category);
     } else {
       hazardData = {
@@ -286,21 +275,21 @@ exports.handler = async (event) => {
       };
     }
     
-    // Step 5: Save to Airtable
     const saved = await saveToAirtable(product, hazardData);
-    if (saved) console.log(`[Scanner v3.0] Saved as ${saved.productId}`);
+    if (saved) {
+      console.log('[Scanner v3.0] Saved as ' + saved.productId);
+    }
     
-    // Build response
     const result = {
       source: product.source,
-      productId: saved?.productId,
+      productId: saved ? saved.productId : null,
       name: product.name,
       brand: product.brand,
       category: product.category,
       subCategory: product.subCategory,
       ingredients: product.ingredients,
       imageUrl: product.imageUrl,
-      barcode,
+      barcode: barcode,
       hazardScore: hazardData.hazard_score,
       hazardLevel: hazardData.hazard_level,
       domainScores: hazardData.domain_scores,
@@ -325,4 +314,3 @@ exports.handler = async (event) => {
     };
   }
 };
-```
