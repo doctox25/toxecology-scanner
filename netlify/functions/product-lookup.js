@@ -1,9 +1,11 @@
 // netlify/functions/product-lookup.js
-// Scanner v3.1 - Added miss tracking
+// Scanner v3.2 - 5-Tier Lookup
 
 const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY;
-const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID; // Ontology base
+const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID;
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
+const UPCITEMDB_API_KEY = process.env.UPCITEMDB_API_KEY;
+const BARCODELOOKUP_API_KEY = process.env.BARCODELOOKUP_API_KEY;
 
 const headers = {
   'Access-Control-Allow-Origin': '*',
@@ -13,76 +15,10 @@ const headers = {
 };
 
 // ============================================
-// MISS TRACKING (NEW in v3.1)
+// TIER 1: AIRTABLE (CACHE)
 // ============================================
 
-async function logMiss(barcode, categoryHint = 'Unknown') {
-  try {
-    // Check if barcode already logged
-    const checkUrl = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/scan_misses?filterByFormula={barcode}="${barcode}"`;
-    const checkResponse = await fetch(checkUrl, {
-      headers: { 'Authorization': `Bearer ${AIRTABLE_API_KEY}` }
-    });
-    
-    const checkData = await checkResponse.json();
-    
-    if (checkData.records?.length > 0) {
-      // Barcode exists - increment scan_count
-      const rec = checkData.records[0];
-      const newCount = (rec.fields.scan_count || 1) + 1;
-      
-      await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/scan_misses/${rec.id}`, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${AIRTABLE_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          fields: {
-            scan_count: newCount,
-            last_scanned: new Date().toISOString().split('T')[0],
-          }
-        }),
-      });
-      
-      console.log(`Updated miss count for ${barcode}: ${newCount}`);
-      return { updated: true, count: newCount };
-    } else {
-      // New barcode - create record
-      const today = new Date().toISOString().split('T')[0];
-      
-      await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/scan_misses`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${AIRTABLE_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          fields: {
-            barcode: barcode,
-            scan_count: 1,
-            first_scanned: today,
-            last_scanned: today,
-            status: 'pending',
-            category_hint: categoryHint,
-          }
-        }),
-      });
-      
-      console.log(`Logged new miss: ${barcode}`);
-      return { created: true, count: 1 };
-    }
-  } catch (error) {
-    console.error('Miss logging error:', error);
-    return { error: error.message };
-  }
-}
-
-// ============================================
-// LOOKUP FUNCTIONS
-// ============================================
-
-async function lookupInAirtable(barcode) {
+async function lookupAirtable(barcode) {
   try {
     const url = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/products_exposures?filterByFormula=OR({upc_barcode}="${barcode}",{upc_barcode}="${barcode.padStart(13,'0')}",{upc_barcode}="${barcode.padStart(14,'0')}")&maxRecords=1`;
     const response = await fetch(url, {
@@ -123,17 +59,21 @@ async function lookupInAirtable(barcode) {
   }
 }
 
+// ============================================
+// TIER 2: OPEN FOOD FACTS (FREE)
+// ============================================
+
 async function lookupOpenFoodFacts(barcode) {
   try {
     const response = await fetch(
       `https://world.openfoodfacts.org/api/v0/product/${barcode}.json`,
-      { headers: { 'User-Agent': 'ToxEcology/3.1 (contact@toxecology.com)' } }
+      { headers: { 'User-Agent': 'ToxEcology/3.2 (contact@toxecology.com)' } }
     );
     const data = await response.json();
     
-    if (data.status === 1 && data.product) {
+    if (data.status === 1 && data.product?.product_name) {
       return {
-        name: data.product.product_name || 'Unknown Product',
+        name: data.product.product_name,
         brand: data.product.brands || 'Unknown Brand',
         ingredients: data.product.ingredients_text || null,
         category: 'Food',
@@ -148,17 +88,21 @@ async function lookupOpenFoodFacts(barcode) {
   }
 }
 
+// ============================================
+// TIER 3: OPEN BEAUTY FACTS (FREE)
+// ============================================
+
 async function lookupOpenBeautyFacts(barcode) {
   try {
     const response = await fetch(
       `https://world.openbeautyfacts.org/api/v0/product/${barcode}.json`,
-      { headers: { 'User-Agent': 'ToxEcology/3.1 (contact@toxecology.com)' } }
+      { headers: { 'User-Agent': 'ToxEcology/3.2 (contact@toxecology.com)' } }
     );
     const data = await response.json();
     
-    if (data.status === 1 && data.product) {
+    if (data.status === 1 && data.product?.product_name) {
       return {
-        name: data.product.product_name || 'Unknown Product',
+        name: data.product.product_name,
         brand: data.product.brands || 'Unknown Brand',
         ingredients: data.product.ingredients_text || null,
         category: 'Personal Care',
@@ -172,6 +116,157 @@ async function lookupOpenBeautyFacts(barcode) {
     return null;
   }
 }
+
+// ============================================
+// TIER 4: UPCITEMDB ($10/mo)
+// ============================================
+
+async function lookupUPCitemdb(barcode) {
+  if (!UPCITEMDB_API_KEY) return null;
+  
+  try {
+    const response = await fetch(
+      `https://api.upcitemdb.com/prod/trial/lookup?upc=${barcode}`,
+      {
+        headers: {
+          'Authorization': `Bearer ${UPCITEMDB_API_KEY}`,
+          'Accept': 'application/json',
+        }
+      }
+    );
+    const data = await response.json();
+    
+    if (data.items?.length > 0) {
+      const item = data.items[0];
+      // Determine category based on item info
+      let category = 'Household';
+      const title = (item.title || '').toLowerCase();
+      const cat = (item.category || '').toLowerCase();
+      
+      if (cat.includes('food') || cat.includes('beverage') || cat.includes('grocery')) {
+        category = 'Food';
+      } else if (cat.includes('beauty') || cat.includes('personal') || cat.includes('health')) {
+        category = 'Personal Care';
+      }
+      
+      return {
+        name: item.title || 'Unknown Product',
+        brand: item.brand || 'Unknown Brand',
+        ingredients: item.description || null, // UPCitemdb doesn't always have ingredients
+        category: category,
+        imageUrl: item.images?.[0] || null,
+        source: 'UPCitemdb',
+      };
+    }
+    return null;
+  } catch (error) {
+    console.error('UPCitemdb error:', error);
+    return null;
+  }
+}
+
+// ============================================
+// TIER 5: BARCODELOOKUP ($19/mo)
+// ============================================
+
+async function lookupBarcodelookup(barcode) {
+  if (!BARCODELOOKUP_API_KEY) return null;
+  
+  try {
+    const response = await fetch(
+      `https://api.barcodelookup.com/v3/products?barcode=${barcode}&formatted=y&key=${BARCODELOOKUP_API_KEY}`
+    );
+    const data = await response.json();
+    
+    if (data.products?.length > 0) {
+      const product = data.products[0];
+      
+      // Determine category
+      let category = 'Household';
+      const cat = (product.category || '').toLowerCase();
+      
+      if (cat.includes('food') || cat.includes('beverage') || cat.includes('grocery')) {
+        category = 'Food';
+      } else if (cat.includes('beauty') || cat.includes('personal') || cat.includes('health')) {
+        category = 'Personal Care';
+      }
+      
+      return {
+        name: product.title || product.product_name || 'Unknown Product',
+        brand: product.brand || 'Unknown Brand',
+        ingredients: product.ingredients || null,
+        category: category,
+        imageUrl: product.images?.[0] || null,
+        source: 'Barcodelookup',
+      };
+    }
+    return null;
+  } catch (error) {
+    console.error('Barcodelookup error:', error);
+    return null;
+  }
+}
+
+// ============================================
+// MISS LOGGING
+// ============================================
+
+async function logMiss(barcode, categoryHint = 'Unknown') {
+  try {
+    const checkUrl = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/scan_misses?filterByFormula={barcode}="${barcode}"`;
+    const checkResponse = await fetch(checkUrl, {
+      headers: { 'Authorization': `Bearer ${AIRTABLE_API_KEY}` }
+    });
+    const checkData = await checkResponse.json();
+    
+    if (checkData.records?.length > 0) {
+      const rec = checkData.records[0];
+      const newCount = (rec.fields.scan_count || 1) + 1;
+      
+      await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/scan_misses/${rec.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${AIRTABLE_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          fields: {
+            scan_count: newCount,
+            last_scanned: new Date().toISOString().split('T')[0],
+          }
+        }),
+      });
+      return { updated: true, count: newCount };
+    } else {
+      const today = new Date().toISOString().split('T')[0];
+      await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/scan_misses`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${AIRTABLE_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          fields: {
+            barcode,
+            scan_count: 1,
+            first_scanned: today,
+            last_scanned: today,
+            status: 'pending',
+            category_hint: categoryHint,
+          }
+        }),
+      });
+      return { created: true };
+    }
+  } catch (error) {
+    console.error('Miss logging error:', error);
+    return { error: error.message };
+  }
+}
+
+// ============================================
+// CLAUDE SCORING
+// ============================================
 
 async function scoreWithClaude(ingredients, productName, category) {
   if (!ingredients || !ANTHROPIC_API_KEY) return null;
@@ -195,43 +290,35 @@ Product: ${productName}
 Category: ${category}
 Ingredients: ${ingredients}
 
-Return format:
+Return:
 {
   "hazardScore": 0-100,
   "hazardLevel": "Low|Moderate|High",
-  "domainScores": {
-    "vocs": 0-100,
-    "phthalates": 0-100,
-    "parabens": 0-100,
-    "metals": 0-100,
-    "pfas": 0-100,
-    "pesticides": 0-100,
-    "plastics": 0-100
-  },
-  "concerns": ["top concern 1", "top concern 2"]
+  "domainScores": {"vocs":0,"phthalates":0,"parabens":0,"metals":0,"pfas":0,"pesticides":0,"plastics":0},
+  "concerns": ["concern1","concern2"]
 }`
         }]
       }),
     });
     
     const data = await response.json();
-    const text = data.content[0].text;
+    const text = data.content?.[0]?.text || '';
     const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      return JSON.parse(jsonMatch[0]);
-    }
-    return null;
+    return jsonMatch ? JSON.parse(jsonMatch[0]) : null;
   } catch (error) {
     console.error('Claude scoring error:', error);
     return null;
   }
 }
 
+// ============================================
+// SAVE TO AIRTABLE
+// ============================================
+
 async function saveToAirtable(product) {
   try {
-    const productId = product.category === 'Food' 
-      ? `FD-${Date.now().toString().slice(-6)}`
-      : `CP-${Date.now().toString().slice(-6)}`;
+    const prefix = product.category === 'Food' ? 'FD' : product.category === 'Personal Care' ? 'CP' : 'HH';
+    const productId = `${prefix}-${Date.now().toString().slice(-6)}`;
       
     const response = await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/products_exposures`, {
       method: 'POST',
@@ -276,61 +363,61 @@ exports.handler = async (event) => {
     return {
       statusCode: 400,
       headers,
-      body: JSON.stringify({ 
-        success: false, 
-        error: 'Invalid barcode format',
-        message: 'Barcode must be 8-14 digits'
-      }),
+      body: JSON.stringify({ success: false, error: 'Invalid barcode (8-14 digits)' }),
     };
   }
 
-  console.log(`Looking up barcode: ${barcode}`);
+  console.log(`[v3.2] Looking up: ${barcode}`);
 
-  // Tier 1: Check Airtable
-  let product = await lookupInAirtable(barcode);
+  // TIER 1: Airtable
+  let product = await lookupAirtable(barcode);
   if (product) {
-    console.log(`Found in Airtable: ${product.name}`);
-    return {
-      statusCode: 200,
-      headers,
-      body: JSON.stringify({ success: true, product, tier: 'airtable' }),
-    };
+    console.log(`✓ Tier 1 (Airtable): ${product.name}`);
+    return { statusCode: 200, headers, body: JSON.stringify({ success: true, product, tier: 'Airtable' }) };
   }
 
-  // Tier 2: Check Open Food Facts
+  // TIER 2: Open Food Facts
   let external = await lookupOpenFoodFacts(barcode);
-  let categoryHint = 'Food';
-  
-  // Tier 3: Check Open Beauty Facts
+  if (external) {
+    console.log(`✓ Tier 2 (OFF): ${external.name}`);
+  }
+
+  // TIER 3: Open Beauty Facts
   if (!external) {
     external = await lookupOpenBeautyFacts(barcode);
-    categoryHint = 'Personal Care';
+    if (external) console.log(`✓ Tier 3 (OBF): ${external.name}`);
   }
 
-  // ========================================
-  // NOT FOUND - Log the miss (NEW in v3.1)
-  // ========================================
+  // TIER 4: UPCitemdb
   if (!external) {
-    console.log(`Product not found: ${barcode}`);
-    
-    const missResult = await logMiss(barcode, 'Unknown');
-    
+    external = await lookupUPCitemdb(barcode);
+    if (external) console.log(`✓ Tier 4 (UPCitemdb): ${external.name}`);
+  }
+
+  // TIER 5: Barcodelookup
+  if (!external) {
+    external = await lookupBarcodelookup(barcode);
+    if (external) console.log(`✓ Tier 5 (Barcodelookup): ${external.name}`);
+  }
+
+  // NOT FOUND - Log miss
+  if (!external) {
+    console.log(`✗ Not found in any tier: ${barcode}`);
+    await logMiss(barcode, 'Unknown');
     return {
       statusCode: 404,
       headers,
-      body: JSON.stringify({ 
-        success: false, 
+      body: JSON.stringify({
+        success: false,
         error: 'Product not found',
-        barcode: barcode,
+        barcode,
         logged: true,
-        message: 'This barcode has been logged for manual research.'
+        message: 'Logged for AI research.',
       }),
     };
   }
 
-  // Found externally - score and save
-  console.log(`Found in ${external.source}: ${external.name}`);
-  
+  // Score with Claude if ingredients available
   let scoring = null;
   if (external.ingredients) {
     scoring = await scoreWithClaude(external.ingredients, external.name, external.category);
@@ -341,7 +428,7 @@ exports.handler = async (event) => {
     name: external.name,
     brand: external.brand,
     category: external.category,
-    barcode: barcode,
+    barcode,
     ingredients: external.ingredients,
     hazardScore: scoring?.hazardScore || 0,
     hazardLevel: scoring?.hazardLevel || 'Unknown',
@@ -352,12 +439,9 @@ exports.handler = async (event) => {
     isNew: true,
   };
 
-  // Save to Airtable for future lookups
+  // Cache to Airtable
   const recordId = await saveToAirtable(product);
-  if (recordId) {
-    product.id = recordId;
-    console.log(`Saved to Airtable: ${recordId}`);
-  }
+  if (recordId) product.id = recordId;
 
   return {
     statusCode: 200,
