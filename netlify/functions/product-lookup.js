@@ -1,5 +1,5 @@
 // netlify/functions/product-lookup.js
-// Scanner v3.2 - 5-Tier Lookup (UPCitemdb DEV plan)
+// Scanner v3.2.1 - 5-Tier Lookup (with JSON parse fix)
 
 const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY;
 const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID;
@@ -122,7 +122,10 @@ async function lookupOpenBeautyFacts(barcode) {
 // ============================================
 
 async function lookupUPCitemdb(barcode) {
-  if (!UPCITEMDB_API_KEY) return null;
+  if (!UPCITEMDB_API_KEY) {
+    console.log('⚠ UPCitemdb: No API key configured');
+    return null;
+  }
   
   try {
     const response = await fetch(
@@ -135,7 +138,23 @@ async function lookupUPCitemdb(barcode) {
         }
       }
     );
-    const data = await response.json();
+    
+    // Handle non-200 responses
+    if (!response.ok) {
+      console.error(`UPCitemdb HTTP error: ${response.status}`);
+      return null;
+    }
+    
+    const text = await response.text();
+    if (!text || text.trim() === '') return null;
+    
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch (e) {
+      console.error('UPCitemdb JSON parse error:', text.substring(0, 100));
+      return null;
+    }
     
     if (data.items?.length > 0) {
       const item = data.items[0];
@@ -169,13 +188,27 @@ async function lookupUPCitemdb(barcode) {
 // ============================================
 
 async function lookupBarcodelookup(barcode) {
-  if (!BARCODELOOKUP_API_KEY) return null;
+  if (!BARCODELOOKUP_API_KEY) {
+    console.log('⚠ Barcodelookup: No API key configured');
+    return null;
+  }
   
   try {
     const response = await fetch(
       `https://api.barcodelookup.com/v3/products?barcode=${barcode}&formatted=y&key=${BARCODELOOKUP_API_KEY}`
     );
-    const data = await response.json();
+    
+    // Handle empty or error responses gracefully
+    const text = await response.text();
+    if (!text || text.trim() === '') return null;
+    
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch (e) {
+      console.error('Barcodelookup JSON parse error:', text.substring(0, 100));
+      return null;
+    }
     
     if (data.products?.length > 0) {
       const product = data.products[0];
@@ -364,7 +397,7 @@ exports.handler = async (event) => {
     };
   }
 
-  console.log(`[v3.2] Looking up: ${barcode}`);
+  console.log(`[v3.2.1] Looking up: ${barcode}`);
 
   // TIER 1: Airtable (cached)
   let product = await lookupAirtable(barcode);
