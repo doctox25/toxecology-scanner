@@ -1,5 +1,5 @@
 // netlify/functions/product-lookup.js
-// Scanner v3.2 - 5-Tier Lookup
+// Scanner v3.2 - 5-Tier Lookup (UPCitemdb DEV plan)
 
 const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY;
 const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID;
@@ -118,7 +118,7 @@ async function lookupOpenBeautyFacts(barcode) {
 }
 
 // ============================================
-// TIER 4: UPCITEMDB ($10/mo)
+// TIER 4: UPCITEMDB (DEV $99/mo - v1 API)
 // ============================================
 
 async function lookupUPCitemdb(barcode) {
@@ -126,11 +126,12 @@ async function lookupUPCitemdb(barcode) {
   
   try {
     const response = await fetch(
-      `https://api.upcitemdb.com/prod/trial/lookup?upc=${barcode}`,
+      `https://api.upcitemdb.com/prod/v1/lookup?upc=${barcode}`,
       {
         headers: {
           'Authorization': `Bearer ${UPCITEMDB_API_KEY}`,
           'Accept': 'application/json',
+          'Content-Type': 'application/json',
         }
       }
     );
@@ -138,9 +139,7 @@ async function lookupUPCitemdb(barcode) {
     
     if (data.items?.length > 0) {
       const item = data.items[0];
-      // Determine category based on item info
       let category = 'Household';
-      const title = (item.title || '').toLowerCase();
       const cat = (item.category || '').toLowerCase();
       
       if (cat.includes('food') || cat.includes('beverage') || cat.includes('grocery')) {
@@ -152,7 +151,7 @@ async function lookupUPCitemdb(barcode) {
       return {
         name: item.title || 'Unknown Product',
         brand: item.brand || 'Unknown Brand',
-        ingredients: item.description || null, // UPCitemdb doesn't always have ingredients
+        ingredients: item.description || null,
         category: category,
         imageUrl: item.images?.[0] || null,
         source: 'UPCitemdb',
@@ -180,8 +179,6 @@ async function lookupBarcodelookup(barcode) {
     
     if (data.products?.length > 0) {
       const product = data.products[0];
-      
-      // Determine category
       let category = 'Household';
       const cat = (product.category || '').toLowerCase();
       
@@ -369,7 +366,7 @@ exports.handler = async (event) => {
 
   console.log(`[v3.2] Looking up: ${barcode}`);
 
-  // TIER 1: Airtable
+  // TIER 1: Airtable (cached)
   let product = await lookupAirtable(barcode);
   if (product) {
     console.log(`✓ Tier 1 (Airtable): ${product.name}`);
@@ -388,7 +385,7 @@ exports.handler = async (event) => {
     if (external) console.log(`✓ Tier 3 (OBF): ${external.name}`);
   }
 
-  // TIER 4: UPCitemdb
+  // TIER 4: UPCitemdb (DEV plan - v1 API)
   if (!external) {
     external = await lookupUPCitemdb(barcode);
     if (external) console.log(`✓ Tier 4 (UPCitemdb): ${external.name}`);
