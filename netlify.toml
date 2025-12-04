@@ -2,17 +2,11 @@
   publish = "public"
   functions = "netlify/functions"
 
-[[redirects]]
-  from = "/api/*"
-  to = "/.netlify/functions/:splat"
-  status = 200
+[functions]
+  node_bundler = "esbuild"
 
-[[headers]]
-  for = "/*"
-  [headers.values]
-    X-Frame-Options = "DENY"
-    X-Content-Type-Options = "nosniff"
-    Access-Control-Allow-Origin = "*"
-[[functions]]
-  path = "/.netlify/functions/parse-vibrant"
+[functions."parse-vibrant"]
   timeout = 60
+
+[functions."product-lookup"]
+  timeout = 15
