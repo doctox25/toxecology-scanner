@@ -152,9 +152,9 @@ const MARKER_MAP = {
   // ===== DOM_VOC (12 markers) =====
   '2-methylhippuric acid': '2MHA',
   '2mha': '2MHA',
-  'n-acetyl (3,4-dihydroxybutyl) cysteine': 'NADB_CYS',
-  'n-acetyl-s-(3,4-dihydroxybutyl)-cysteine': 'NADB_CYS',
-  'n-acetyl-s-(3,4-dihydroxybutyl)-l-cysteine': 'NADB_CYS',
+  'n-acetyl (3,4-dihydroxybutyl) cysteine': 'NADC',
+  'n-acetyl-s-(3,4-dihydroxybutyl)-cysteine': 'NADC',
+  'n-acetyl-s-(3,4-dihydroxybutyl)-l-cysteine': 'NADC',
   'phenylglyoxylic acid': 'PGO',
   'phenyl glyoxylic acid': 'PGO',
   'pgo': 'PGO',
@@ -171,9 +171,9 @@ const MARKER_MAP = {
   'n-acetyl (2-cyanoethyl) cysteine': 'NACE',
   'n-acetyl-s-(2-cyanoethyl)-cysteine': 'NACE',
   'nace': 'NACE',
-  'n-acetyl-s-(2-carbamoylethyl)-cysteine': 'NAC_2_CARB',
-  'n-acetyl (2-carbamoylethyl) cysteine': 'NAC_2_CARB',
-  'n-acetyl-s-(2-carbamoylethyl)-l-cysteine': 'NAC_2_CARB',
+  'n-acetyl-s-(2-carbamoylethyl)-cysteine': 'NASC',
+  'n-acetyl (2-carbamoylethyl) cysteine': 'NASC',
+  'n-acetyl-s-(2-carbamoylethyl)-l-cysteine': 'NASC',
   '2-hydroxyisobutyric acid': '2HIB',
   '2hib': '2HIB',
   '4-methylhippuric acid': '4MHA',
@@ -186,9 +186,10 @@ const MARKER_MAP = {
   'tiglylglycine': 'TG',
   
   // ===== FALLBACK CATCHES for Claude's abbreviated extractions =====
-  '2_carbamoylethyl': 'NAC_2_CARB',
-  '2-carbamoylethyl': 'NAC_2_CARB',
-  'carbamoylethyl': 'NAC_2_CARB',
+  '2_carbamoylethyl': 'NASC',
+  '2-carbamoylethyl': 'NASC',
+  'carbamoylethyl': 'NASC',
+  'nasc': 'NASC',
   '4_chlorophenyl': 'DDA',
   '4-chlorophenyl': 'DDA',
   'chlorophenyl': 'DDA',
@@ -201,11 +202,11 @@ const MARKER_MAP = {
   '2_cyanoethyl': 'NACE',
   '2-cyanoethyl': 'NACE',
   'cyanoethyl': 'NACE',
-  'nadc': 'NADB_CYS',
-  'nadb': 'NADB_CYS',
-  '3_4_dihydroxybutyl': 'NADB_CYS',
-  '3,4-dihydroxybutyl': 'NADB_CYS',
-  'dihydroxybutyl': 'NADB_CYS',
+  'nadc': 'NADC',
+  'nadb': 'NADC',
+  '3_4_dihydroxybutyl': 'NADC',
+  '3,4-dihydroxybutyl': 'NADC',
+  'dihydroxybutyl': 'NADC',
   'propyl': 'NAPR'
 };
 
@@ -247,10 +248,10 @@ function normalizeMarkerName(rawName) {
   
   // VOC N-Acetyl compounds (most problematic)
   if (cleaned.includes('carbamoylethyl') || cleaned.includes('carbamoyl') || cleaned.includes('2-carbamoyl')) {
-    return 'NAC_2_CARB';
+    return 'NASC';
   }
   if (cleaned.includes('dihydroxybutyl') || cleaned.includes('3,4-dihydroxy') || cleaned === 'nadc' || cleaned === 'nadb') {
-    return 'NADB_CYS';
+    return 'NADC';
   }
   if (cleaned.includes('cyanoethyl') || cleaned.includes('2-cyano')) {
     return 'NACE';
@@ -281,10 +282,10 @@ function normalizeMarkerName(rawName) {
   // Special handling for N-Acetyl-S compounds (tricky VOC markers)
   if (cleaned.includes('n-acetyl') || cleaned.includes('acetyl')) {
     if (cleaned.includes('carbamoylethyl') || cleaned.includes('carbamoyl')) {
-      return 'NAC_2_CARB';
+      return 'NASC';
     }
     if (cleaned.includes('dihydroxybutyl') || cleaned.includes('3,4-dihydroxy')) {
-      return 'NADB_CYS';
+      return 'NADC';
     }
     if (cleaned.includes('cyanoethyl') || cleaned.includes('2-cyano')) {
       return 'NACE';
