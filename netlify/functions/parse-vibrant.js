@@ -1,31 +1,204 @@
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
-const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY;
-const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID;
 
-// Marker mapping for matching Vibrant names to our marker_ids
-const MARKER_ALIASES = {
+// Complete marker mapping: Vibrant PDF names → Your marker_id abbreviations
+const MARKER_MAP = {
+  // Mycotoxins
   'aflatoxin b1': 'AFB1',
+  'aflatoxin b2': 'AFB2',
+  'aflatoxin g1': 'AFG1',
+  'aflatoxin g2': 'AFG2',
+  'aflatoxin m1': 'AFM1',
+  'ochratoxin a': 'OTA',
+  'gliotoxin': 'GLIO',
+  'mycophenolic acid': 'MPA',
+  'sterigmatocystin': 'STC',
+  'roridin e': 'ROR_E',
+  'roridin a': 'ROR_A',
+  'roridin l2': 'ROR_L2',
+  'roridin l-2': 'ROR_L2',
+  'verrucarin a': 'VER_A',
+  'verrucarin j': 'VER_J',
+  'satratoxin g': 'SAT_G',
+  'satratoxin h': 'SAT_H',
+  't-2 toxin': 'T2_TOX',
+  't2 toxin': 'T2_TOX',
+  'deoxynivalenol': 'DON',
+  'zearalenone': 'ZEA',
+  'citrinin': 'CTN',
+  'chaetoglobosin a': 'CHA',
+  'enniatin b': 'ENN_B',
+  'enniatin b1': 'ENN_B1',
+  'fumonisin b1': 'F_B1',
+  'fumonisins b1': 'F_B1',
+  'fumonisin b2': 'F_B2',
+  'fumonisins b2': 'F_B2',
+  'fumonisin b3': 'F_B3',
+  'fumonisins b3': 'F_B3',
+  'patulin': 'PAT',
+  'dihydrocitrinone': 'DHC',
+  'diacetoxyscirpenol': 'DAS',
+  'nivalenol': 'NIV',
+  
+  // Heavy Metals
   'arsenic': 'ARS',
   'lead': 'LEAD',
-  'cadmium': 'CAD',
-  'gliotoxin': 'GLIO',
   'mercury': 'MERC',
+  'cadmium': 'CAD',
+  'aluminum': 'ALU',
+  'barium': 'BAR',
+  'beryllium': 'BER',
+  'bismuth': 'BIS',
+  'cesium': 'CES',
+  'gadolinium': 'GAD',
+  'nickel': 'NI',
+  'palladium': 'PALL',
+  'platinum': 'PLAT',
+  'tellurium': 'TELL',
+  'thallium': 'THAL',
+  'thorium': 'THOR',
+  'tin': 'TIN',
+  'tungsten': 'TUNG',
+  'uranium': 'URAN',
+  'antimony': 'ANT',
+  
+  // PFAS
+  'pfos': 'PFOS',
+  'pfoa': 'PFOA',
+  'pfna': 'PFNA',
+  'pfda': 'PFDA',
+  'pfunda': 'PFUNDA',
+  'pfdoa': 'PFDOA',
+  'pftrda': 'PFTRDA',
+  'pfhxa': 'PFHXA',
+  'pfhxs': 'PFHXS',
+  'pfhpa': 'PFHPA',
+  'pfhps': 'PFHPS',
+  'pfba': 'PFBA',
+  'pfbs': 'PFBS',
+  'pfpea': 'PFPEA',
+  'genx': 'GENX',
+  'genx/hpfo-da': 'GENX',
+  'perfluorooctane sulfonic acid': 'PFOS',
+  'perfluorooctanoic acid': 'PFOA',
+  'perfluorononanoic acid': 'PFNA',
+  'perfluorodecanoic acid': 'PFDA',
+  
+  // Phthalates
+  'mono-ethyl phthalate': 'METP',
+  'mono ethyl phthalate': 'METP',
+  'metp': 'METP',
+  'mono-2-ethylhexyl phthalate': 'MEHP',
+  'mono 2-ethylhexyl phthalate': 'MEHP',
+  'mehp': 'MEHP',
+  'mono-(2-ethyl-5-oxohexyl) phthalate': 'MEOHP',
+  'mono (2-ethyl-5-oxohexyl) phthalate': 'MEOHP',
+  'meohp': 'MEOHP',
+  'mono-(2-ethyl-5-hydroxyhexyl) phthalate': 'MEHHP',
+  'mono (2-ethyl-5-hydroxyhexyl) phthalate': 'MEHHP',
+  'mehhp': 'MEHHP',
+  'mono-n-butyl phthalate': 'MNBP',
+  'mnbp': 'MNBP',
+  'mono-isobutyl phthalate': 'MIBP',
+  'mibp': 'MIBP',
+  'mono-benzyl phthalate': 'MBZP',
+  'mbzp': 'MBZP',
+  'mcpp': 'MCPP',
+  
+  // Parabens
+  'methylparaben': 'M_PARA',
+  'ethylparaben': 'E_PARA',
+  'propylparaben': 'P_PAR',
+  'butylparaben': 'B_PAR',
+  
+  // Plastics
   'bisphenol a': 'BPA',
   'bpa': 'BPA',
   'triclosan': 'TCS',
+  '4-nonylphenol': '4_NON',
+  'diphenyl phosphate': 'DPP',
+  
+  // VOCs
+  '2-hydroxyethyl mercapturic acid': '2HEMA',
+  'hema': '2HEMA',
+  '2-methylhippuric acid': '2MHA',
+  '3-methylhippuric acid': '3MHA',
+  '4-methylhippuric acid': '4MHA',
+  'n-acetyl (propyl) cysteine': 'NAPR',
+  'n-acetyl (2-cyanoethyl) cysteine': 'NACE',
+  'n-acetyl (3,4-dihydroxybutyl) cysteine': 'NADB_CYS',
+  'n-acetyl-s-(2-carbamoylethyl)-cysteine': 'NAC_2_CARB',
+  'n-acetyl (2-carbamoylethyl) cysteine': 'NAC_2_CARB',
+  'phenylglyoxylic acid': 'PGO',
+  'phenyl glyoxylic acid': 'PGO',
+  'mandelic acid': 'MA',
+  '2-hydroxyisobutyric acid': '2HIB',
+  'n-acetyl (2,hydroxypropyl) cysteine': 'NAHP',
+  'n-acetyl phenyl cysteine': 'NAP',
+  
+  // Pesticides
   'glyphosate': 'GLYP',
-  'ochratoxin a': 'OTA',
-  'pfos': 'PFOS',
-  'pfoa': 'PFOA',
-  'methylparaben': 'M_PARA',
-  'propylparaben': 'P_PAR',
-  'ethylparaben': 'E_PARA',
-  // Add more as needed
+  'perchlorate': 'PERC',
+  '2,4-d': '2_4_D',
+  '2,4-dichlorophenoxyacetic acid': '2_4_D',
+  'dda': 'DDA',
+  '2,2-bis(4-chlorophenyl) acetic acid': 'DDA',
+  'diethyl phosphate': 'DEP',
+  'dimethyl phosphate': 'DMP',
+  'diethyldithiophosphate': 'DEDTP',
+  'diethylthiophosphate': 'DETP',
+  'dimethyldithiophosphate': 'DMDTP',
+  'dimethylthiophosphate': 'DMTP',
+  '3-phenoxybenzoic acid': '3PBA',
+  'atrazine': 'ATRA',
+  'atrazine mercapturate': 'ATRA_M',
+  
+  // Mitochondrial
+  'tiglylglycine': 'TG'
 };
 
-function normalizeMarkerName(name) {
-  const lower = name.toLowerCase().trim();
-  return MARKER_ALIASES[lower] || name.toUpperCase().replace(/[^A-Z0-9_]/g, '_');
+function normalizeMarkerName(rawName) {
+  if (!rawName) return 'UNKNOWN';
+  
+  // Clean up the name
+  let cleaned = rawName.toLowerCase().trim();
+  
+  // Remove parenthetical abbreviations like "(DEDTP)" or "(2MHA)"
+  cleaned = cleaned.replace(/\s*\([^)]+\)\s*/g, ' ').trim();
+  
+  // Direct match first
+  if (MARKER_MAP[cleaned]) {
+    return MARKER_MAP[cleaned];
+  }
+  
+  // Try matching without special characters
+  const simpler = cleaned.replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
+  if (MARKER_MAP[simpler]) {
+    return MARKER_MAP[simpler];
+  }
+  
+  // Try partial matches - check if any key is contained in the name
+  for (const [key, value] of Object.entries(MARKER_MAP)) {
+    if (cleaned.includes(key)) {
+      return value;
+    }
+  }
+  
+  // Try reverse - check if name is contained in any key
+  for (const [key, value] of Object.entries(MARKER_MAP)) {
+    if (key.includes(cleaned)) {
+      return value;
+    }
+  }
+  
+  // Fallback: extract abbreviation if present in parentheses from original
+  const abbrevMatch = rawName.match(/\(([A-Z0-9_-]+)\)/);
+  if (abbrevMatch) {
+    return abbrevMatch[1].replace(/-/g, '_');
+  }
+  
+  // Last resort: create short code from first letters
+  console.log('[Vibrant Parser] Unmapped marker:', rawName);
+  return rawName.split(/\s+/).map(w => w[0]).join('').toUpperCase().substring(0, 6);
 }
 
 exports.handler = async (event) => {
@@ -51,31 +224,29 @@ exports.handler = async (event) => {
       return { statusCode: 400, headers, body: JSON.stringify({ error: 'No PDF data provided' }) };
     }
 
-    console.log('[Vibrant Parser] Processing PDF for patient:', patientId);
+    console.log('[Vibrant Parser] Processing PDF for patient:', patientId, 'report:', reportId);
 
-    // Send to Claude for extraction
-    const extractionPrompt = `Extract all lab test results from this Vibrant Wellness lab report PDF.
+    const extractionPrompt = `Extract ALL test results from this Vibrant Wellness lab report PDF.
 
-For EACH marker/test result, extract:
-- marker_name: The exact name of the marker/test
-- value: The numeric result value (number only, no units)
-- units: The unit of measurement (µg/g, ng/g, etc.)
-- reference_low: Low end of reference range (if shown)
-- reference_high: High end of reference range (if shown)
-- status: "Normal", "Elevated", "High", or "Low" if indicated
+For each marker/test, extract:
+- marker_name: The full name of the marker
+- value: The numeric result (if "<LOD" or "ND" or "Not Detected", use 0)
 
-Return ONLY valid JSON array (no markdown, no explanation):
-[
-  {"marker_name": "Arsenic", "value": 12.5, "units": "µg/g", "reference_low": 0, "reference_high": 11.9, "status": "Elevated"},
-  {"marker_name": "Lead", "value": 0.3, "units": "µg/g", "reference_low": 0, "reference_high": 0.52, "status": "Normal"}
-]
+Return ONLY valid JSON (no markdown, no backticks):
+{
+  "markers": [
+    {"marker_name": "Arsenic", "value": 12.5},
+    {"marker_name": "Lead", "value": 0.3},
+    {"marker_name": "Ochratoxin A", "value": 4.2},
+    {"marker_name": "Diethyldithiophosphate (DEDTP)", "value": 1.0}
+  ]
+}
 
-Important:
+IMPORTANT:
 - Extract ALL markers from ALL pages
-- Include both in-range and out-of-range results
-- Use exact numeric values (not ranges)
-- If a value shows "<LOD" or "ND", use 0 as the value
-- Categories include: Heavy Metals, Mycotoxins, PFAS, Phthalates, Parabens, VOCs, Pesticides`;
+- Include both normal and elevated results
+- Use the exact marker name as shown in the report
+- Value must be a number only (no units)`;
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -119,39 +290,41 @@ Important:
     // Clean up response
     extractedText = extractedText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
     
-    let results;
+    let parsed;
     try {
-      results = JSON.parse(extractedText);
+      parsed = JSON.parse(extractedText);
     } catch (parseError) {
       console.error('[Vibrant Parser] JSON parse error:', parseError);
-      return { statusCode: 500, headers, body: JSON.stringify({ error: 'Failed to parse Claude response', raw: extractedText }) };
+      return { statusCode: 500, headers, body: JSON.stringify({ error: 'Failed to parse Claude response', raw: extractedText.substring(0, 500) }) };
     }
 
-    console.log('[Vibrant Parser] Extracted', results.length, 'markers');
+    // Use user-provided reportId, not scraped
+    const finalReportId = reportId || `RPT-${Date.now()}`;
+    
+    console.log('[Vibrant Parser] Report ID:', finalReportId);
+    console.log('[Vibrant Parser] Extracted', parsed.markers?.length || 0, 'markers');
 
-    // Format for Airtable
-    const airtableRecords = results.map((result, index) => ({
-      result_id: `${reportId}-${String(index + 1).padStart(3, '0')}`,
-      report_id: reportId,
-      patient_id: patientId,
-      marker_id: normalizeMarkerName(result.marker_name),
-      marker_name_raw: result.marker_name,
-      value: result.value,
-      units: result.units,
-      ref_low: result.reference_low,
-      ref_high: result.reference_high,
-      status: result.status,
-      qualifier: result.value === 0 ? '<LOD' : null
-    }));
+    // Format for Airtable - only the 5 fields you need
+    const airtableRecords = (parsed.markers || []).map((marker, index) => {
+      const markerId = normalizeMarkerName(marker.marker_name);
+      return {
+        result_id: `${finalReportId}-${String(index + 1).padStart(3, '0')}`,
+        report_id: finalReportId,
+        patient_id: patientId || '',
+        marker_id_inbox: markerId,
+        value: parseFloat(marker.value) || 0
+      };
+    });
 
     return {
       statusCode: 200,
       headers,
       body: JSON.stringify({
         success: true,
-        count: results.length,
-        results: airtableRecords,
-        raw: results
+        report_id: finalReportId,
+        patient_id: patientId || '',
+        count: airtableRecords.length,
+        results: airtableRecords
       })
     };
 
