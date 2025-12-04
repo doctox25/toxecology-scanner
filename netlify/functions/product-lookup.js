@@ -1,5 +1,5 @@
 // netlify/functions/product-lookup.js
-// Scanner v3.2.1 - 5-Tier Lookup (with JSON parse fix)
+// Scanner v3.3.0 - Tightened Scoring (4-tier system)
 
 const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY;
 const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID;
@@ -15,6 +15,23 @@ const headers = {
 };
 
 // ============================================
+// SCORING THRESHOLDS (v3.3.0)
+// ============================================
+const THRESHOLDS = {
+  HIGH: 70,       // 70+ = High Risk
+  ELEVATED: 45,   // 45-69 = Elevated
+  MODERATE: 20,   // 20-44 = Moderate
+  // 0-19 = Low
+};
+
+function getHazardLevel(score) {
+  if (score >= THRESHOLDS.HIGH) return 'High';
+  if (score >= THRESHOLDS.ELEVATED) return 'Elevated';
+  if (score >= THRESHOLDS.MODERATE) return 'Moderate';
+  return 'Low';
+}
+
+// ============================================
 // TIER 1: AIRTABLE (CACHE)
 // ============================================
 
@@ -28,6 +45,7 @@ async function lookupAirtable(barcode) {
     
     if (data.records?.length > 0) {
       const r = data.records[0].fields;
+      const score = r.hazard_score_0_100 || 0;
       return {
         id: data.records[0].id,
         productId: r.product_id,
@@ -36,8 +54,8 @@ async function lookupAirtable(barcode) {
         category: r.category,
         subCategory: r.sub_category,
         barcode: r.upc_barcode,
-        hazardScore: r.hazard_score_0_100 || 0,
-        hazardLevel: r.hazard_level || 'Unknown',
+        hazardScore: score,
+        hazardLevel: getHazardLevel(score), // Use consistent 4-tier logic
         domainScores: {
           vocs: r.voc_hazard_Score || 0,
           phthalates: r.phthalates_hazard_Score || 0,
@@ -67,7 +85,7 @@ async function lookupOpenFoodFacts(barcode) {
   try {
     const response = await fetch(
       `https://world.openfoodfacts.org/api/v0/product/${barcode}.json`,
-      { headers: { 'User-Agent': 'ToxEcology/3.2 (contact@toxecology.com)' } }
+      { headers: { 'User-Agent': 'ToxEcology/3.3 (contact@toxecology.com)' } }
     );
     const data = await response.json();
     
@@ -96,7 +114,7 @@ async function lookupOpenBeautyFacts(barcode) {
   try {
     const response = await fetch(
       `https://world.openbeautyfacts.org/api/v0/product/${barcode}.json`,
-      { headers: { 'User-Agent': 'ToxEcology/3.2 (contact@toxecology.com)' } }
+      { headers: { 'User-Agent': 'ToxEcology/3.3 (contact@toxecology.com)' } }
     );
     const data = await response.json();
     
@@ -295,7 +313,7 @@ async function logMiss(barcode, categoryHint = 'Unknown') {
 }
 
 // ============================================
-// CLAUDE SCORING
+// CLAUDE SCORING (TIGHTENED v3.3.0)
 // ============================================
 
 async function scoreWithClaude(ingredients, productName, category) {
@@ -311,21 +329,51 @@ async function scoreWithClaude(ingredients, productName, category) {
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
-        max_tokens: 500,
+        max_tokens: 600,
         messages: [{
           role: 'user',
-          content: `Analyze these ingredients for toxin hazards. Return ONLY valid JSON.
+          content: `You are a toxicology expert scoring consumer products. Be STRICT - most mainstream products contain concerning ingredients.
+
+SCORING GUIDELINES (be aggressive, not lenient):
+- Base score: Start at 25 for any processed product
+- PFAS/PFOA/PTFE: +30-40 points (forever chemicals, bioaccumulative)
+- Parabens (methylparaben, propylparaben, etc): +15-25 points (endocrine disruptors)
+- Phthalates (fragrance often contains these): +15-25 points (hormone disruptors)
+- Formaldehyde releasers (DMDM hydantoin, quaternium-15, etc): +25-35 points (carcinogen)
+- BHA/BHT: +15-20 points (possible carcinogen)
+- Synthetic fragrance/parfum: +10-20 points (usually contains phthalates)
+- SLS/SLES: +5-10 points (irritant, contamination concerns)
+- Mineral oil/petrolatum: +5-10 points (contamination risk)
+- Artificial colors (FD&C, D&C): +5-15 points
+- Long ingredient lists (20+): +5-10 points (complexity = more exposure routes)
+
+HAZARD LEVELS:
+- 0-19: Low (truly clean products - rare)
+- 20-44: Moderate (some concerns - typical "natural" products)
+- 45-69: Elevated (multiple concerning ingredients - typical mainstream)
+- 70+: High (known carcinogens or many red flags)
+
+DOMAIN SCORING (0-100 each):
+Score each domain based on relevant ingredients present. Be specific.
 
 Product: ${productName}
 Category: ${category}
 Ingredients: ${ingredients}
 
-Return:
+Return ONLY valid JSON:
 {
-  "hazardScore": 0-100,
-  "hazardLevel": "Low|Moderate|High",
-  "domainScores": {"vocs":0,"phthalates":0,"parabens":0,"metals":0,"pfas":0,"pesticides":0,"plastics":0},
-  "concerns": ["concern1","concern2"]
+  "hazardScore": <number 0-100>,
+  "hazardLevel": "<Low|Moderate|Elevated|High>",
+  "domainScores": {
+    "vocs": <0-100>,
+    "phthalates": <0-100>,
+    "parabens": <0-100>,
+    "metals": <0-100>,
+    "pfas": <0-100>,
+    "pesticides": <0-100>,
+    "plastics": <0-100>
+  },
+  "concerns": ["<specific ingredient 1>", "<specific ingredient 2>", ...]
 }`
         }]
       }),
@@ -334,7 +382,14 @@ Return:
     const data = await response.json();
     const text = data.content?.[0]?.text || '';
     const jsonMatch = text.match(/\{[\s\S]*\}/);
-    return jsonMatch ? JSON.parse(jsonMatch[0]) : null;
+    
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+      // Ensure hazardLevel matches our thresholds
+      parsed.hazardLevel = getHazardLevel(parsed.hazardScore);
+      return parsed;
+    }
+    return null;
   } catch (error) {
     console.error('Claude scoring error:', error);
     return null;
@@ -397,12 +452,12 @@ exports.handler = async (event) => {
     };
   }
 
-  console.log(`[v3.2.1] Looking up: ${barcode}`);
+  console.log(`[v3.3.0] Looking up: ${barcode}`);
 
   // TIER 1: Airtable (cached)
   let product = await lookupAirtable(barcode);
   if (product) {
-    console.log(`✓ Tier 1 (Airtable): ${product.name}`);
+    console.log(`✓ Tier 1 (Airtable): ${product.name} [Score: ${product.hazardScore}]`);
     return { statusCode: 200, headers, body: JSON.stringify({ success: true, product, tier: 'Airtable' }) };
   }
 
@@ -451,8 +506,14 @@ exports.handler = async (event) => {
   let scoring = null;
   if (external.ingredients) {
     scoring = await scoreWithClaude(external.ingredients, external.name, external.category);
+    if (scoring) {
+      console.log(`✓ Claude scored: ${scoring.hazardScore} (${scoring.hazardLevel})`);
+    }
   }
 
+  // Fallback scoring if no ingredients or Claude fails
+  const fallbackScore = 30; // Default to Moderate if unknown
+  
   product = {
     productId: `AUTO-${Date.now()}`,
     name: external.name,
@@ -460,8 +521,8 @@ exports.handler = async (event) => {
     category: external.category,
     barcode,
     ingredients: external.ingredients,
-    hazardScore: scoring?.hazardScore || 0,
-    hazardLevel: scoring?.hazardLevel || 'Unknown',
+    hazardScore: scoring?.hazardScore ?? fallbackScore,
+    hazardLevel: scoring?.hazardLevel ?? getHazardLevel(fallbackScore),
     domainScores: scoring?.domainScores || {},
     concerns: scoring?.concerns || [],
     source: external.source,
