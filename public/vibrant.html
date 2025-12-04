@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ToxEcology - Vibrant PDF Parser</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #0a1628 0%, #1a2744 100%);
+      min-height: 100vh;
+      color: #e0e0e0;
+      padding: 20px;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    h1 {
+      text-align: center;
+      color: #00d4aa;
+      margin-bottom: 10px;
+    }
+    .subtitle {
+      text-align: center;
+      color: #888;
+      margin-bottom: 30px;
+    }
+    .card {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+    .form-group {
+      margin-bottom: 20px;
+    }
+    label {
+      display: block;
+      margin-bottom: 8px;
+      color: #00d4aa;
+      font-weight: 500;
+    }
+    input[type="text"], select {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 8px;
+      background: rgba(0,0,0,0.3);
+      color: #fff;
+      font-size: 16px;
+    }
+    input[type="file"] {
+      display: none;
+    }
+    .upload-area {
+      border: 2px dashed rgba(0,212,170,0.5);
+      border-radius: 12px;
+      padding: 40px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    .upload-area:hover {
+      border-color: #00d4aa;
+      background: rgba(0,212,170,0.1);
+    }
+    .upload-area.has-file {
+      border-color: #00d4aa;
+      background: rgba(0,212,170,0.15);
+    }
+    .upload-icon {
+      font-size: 48px;
+      margin-bottom: 10px;
+    }
+    .btn {
+      background: linear-gradient(135deg, #00d4aa 0%, #00b894 100%);
+      color: #0a1628;
+      border: none;
+      padding: 14px 28px;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+      transition: transform 0.2s;
+    }
+    .btn:hover { transform: translateY(-2px); }
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .results-section { display: none; }
+    .results-section.visible { display: block; }
+    .status {
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    .status.loading { background: rgba(255,193,7,0.2); color: #ffc107; }
+    .status.success { background: rgba(0,212,170,0.2); color: #00d4aa; }
+    .status.error { background: rgba(255,82,82,0.2); color: #ff5252; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    th, td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    th {
+      background: rgba(0,212,170,0.2);
+      color: #00d4aa;
+      font-weight: 600;
+    }
+    tr:hover { background: rgba(255,255,255,0.05); }
+    .elevated { color: #ff5252; font-weight: 600; }
+    .normal { color: #00d4aa; }
+    .copy-btn {
+      background: rgba(0,212,170,0.2);
+      color: #00d4aa;
+      border: 1px solid #00d4aa;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-right: 10px;
+    }
+    .copy-btn:hover { background: rgba(0,212,170,0.3); }
+    .btn-group { display: flex; gap: 10px; margin-top: 20px; }
+    .btn-secondary {
+      background: transparent;
+      border: 1px solid #00d4aa;
+      color: #00d4aa;
+    }
+    .summary-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+    .stat-card {
+      background: rgba(0,0,0,0.3);
+      padding: 15px;
+      border-radius: 8px;
+      text-align: center;
+    }
+    .stat-value {
+      font-size: 28px;
+      font-weight: bold;
+      color: #00d4aa;
+    }
+    .stat-label {
+      font-size: 12px;
+      color: #888;
+      margin-top: 5px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🧬 Vibrant PDF Parser</h1>
+    <p class="subtitle">Upload a Vibrant Wellness lab report to extract results</p>
+
+    <div class="card">
+      <div class="form-group">
+        <label>Patient ID</label>
+        <input type="text" id="patientId" placeholder="e.g., PAT-001">
+      </div>
+      <div class="form-group">
+        <label>Report ID</label>
+        <input type="text" id="reportId" placeholder="e.g., RPT-2024-001">
+      </div>
+      <div class="form-group">
+        <label>Vibrant PDF</label>
+        <div class="upload-area" id="uploadArea" onclick="document.getElementById('pdfFile').click()">
+          <div class="upload-icon">📄</div>
+          <div id="uploadText">Click to upload PDF or drag & drop</div>
+        </div>
+        <input type="file" id="pdfFile" accept=".pdf" onchange="handleFileSelect(event)">
+      </div>
+      <button class="btn" id="parseBtn" onclick="parsePdf()" disabled>
+        🔬 Extract Lab Results
+      </button>
+    </div>
+
+    <div id="status"></div>
+
+    <div class="results-section" id="resultsSection">
+      <div class="card">
+        <h2 style="color: #00d4aa; margin-bottom: 20px;">📊 Extraction Results</h2>
+        
+        <div class="summary-stats" id="summaryStats"></div>
+        
+        <div class="btn-group">
+          <button class="copy-btn" onclick="copyAsCSV()">📋 Copy as CSV</button>
+          <button class="copy-btn" onclick="copyAsJSON()">📋 Copy as JSON</button>
+          <button class="copy-btn" onclick="downloadCSV()">⬇️ Download CSV</button>
+        </div>
+
+        <table id="resultsTable">
+          <thead>
+            <tr>
+              <th>Marker</th>
+              <th>Value</th>
+              <th>Units</th>
+              <th>Reference Range</th>
+              <th>Status</th>
+              <th>Marker ID</th>
+            </tr>
+          </thead>
+          <tbody id="resultsBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let selectedFile = null;
+    let parsedResults = [];
+
+    function handleFileSelect(event) {
+      const file = event.target.files[0];
+      if (file && file.type === 'application/pdf') {
+        selectedFile = file;
+        document.getElementById('uploadArea').classList.add('has-file');
+        document.getElementById('uploadText').textContent = `✅ ${file.name}`;
+        document.getElementById('parseBtn').disabled = false;
+      }
+    }
+
+    // Drag and drop
+    const uploadArea = document.getElementById('uploadArea');
+    uploadArea.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      uploadArea.style.borderColor = '#00d4aa';
+    });
+    uploadArea.addEventListener('dragleave', () => {
+      uploadArea.style.borderColor = 'rgba(0,212,170,0.5)';
+    });
+    uploadArea.addEventListener('drop', (e) => {
+      e.preventDefault();
+      const file = e.dataTransfer.files[0];
+      if (file && file.type === 'application/pdf') {
+        selectedFile = file;
+        document.getElementById('uploadArea').classList.add('has-file');
+        document.getElementById('uploadText').textContent = `✅ ${file.name}`;
+        document.getElementById('parseBtn').disabled = false;
+      }
+    });
+
+    async function parsePdf() {
+      if (!selectedFile) return;
+
+      const patientId = document.getElementById('patientId').value || 'PAT-UNKNOWN';
+      const reportId = document.getElementById('reportId').value || `RPT-${Date.now()}`;
+
+      const statusEl = document.getElementById('status');
+      statusEl.className = 'status loading';
+      statusEl.textContent = '🔄 Processing PDF with Claude AI... This may take 30-60 seconds.';
+      statusEl.style.display = 'block';
+
+      document.getElementById('parseBtn').disabled = true;
+      document.getElementById('resultsSection').classList.remove('visible');
+
+      try {
+        // Convert PDF to base64
+        const base64 = await fileToBase64(selectedFile);
+
+        const response = await fetch('/.netlify/functions/parse-vibrant', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            pdfBase64: base64,
+            patientId: patientId,
+            reportId: reportId
+          })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+          throw new Error(data.error || 'Parsing failed');
+        }
+
+        parsedResults = data.results;
+        displayResults(data);
+
+        statusEl.className = 'status success';
+        statusEl.textContent = `✅ Successfully extracted ${data.count} markers!`;
+
+      } catch (error) {
+        statusEl.className = 'status error';
+        statusEl.textContent = `❌ Error: ${error.message}`;
+      }
+
+      document.getElementById('parseBtn').disabled = false;
+    }
+
+    function fileToBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const base64 = reader.result.split(',')[1];
+          resolve(base64);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function displayResults(data) {
+      // Summary stats
+      const elevated = data.results.filter(r => r.status === 'Elevated' || r.status === 'High').length;
+      const normal = data.results.filter(r => r.status === 'Normal').length;
+
+      document.getElementById('summaryStats').innerHTML = `
+        <div class="stat-card">
+          <div class="stat-value">${data.count}</div>
+          <div class="stat-label">Total Markers</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #ff5252;">${elevated}</div>
+          <div class="stat-label">Elevated</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">${normal}</div>
+          <div class="stat-label">Normal</div>
+        </div>
+      `;
+
+      // Table
+      const tbody = document.getElementById('resultsBody');
+      tbody.innerHTML = data.results.map(r => `
+        <tr>
+          <td>${r.marker_name_raw}</td>
+          <td><strong>${r.value}</strong></td>
+          <td>${r.units || '-'}</td>
+          <td>${r.ref_low || 0} - ${r.ref_high || '-'}</td>
+          <td class="${r.status === 'Elevated' || r.status === 'High' ? 'elevated' : 'normal'}">${r.status || '-'}</td>
+          <td><code>${r.marker_id}</code></td>
+        </tr>
+      `).join('');
+
+      document.getElementById('resultsSection').classList.add('visible');
+    }
+
+    function copyAsCSV() {
+      const headers = ['result_id', 'report_id', 'patient_id', 'marker_id', 'marker_name_raw', 'value', 'units', 'ref_low', 'ref_high', 'status', 'qualifier'];
+      const rows = parsedResults.map(r => headers.map(h => r[h] || '').join(','));
+      const csv = [headers.join(','), ...rows].join('\n');
+      navigator.clipboard.writeText(csv);
+      alert('CSV copied to clipboard!');
+    }
+
+    function copyAsJSON() {
+      navigator.clipboard.writeText(JSON.stringify(parsedResults, null, 2));
+      alert('JSON copied to clipboard!');
+    }
+
+    function downloadCSV() {
+      const headers = ['result_id', 'report_id', 'patient_id', 'marker_id', 'marker_name_raw', 'value', 'units', 'ref_low', 'ref_high', 'status', 'qualifier'];
+      const rows = parsedResults.map(r => headers.map(h => r[h] || '').join(','));
+      const csv = [headers.join(','), ...rows].join('\n');
+      
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `vibrant-results-${document.getElementById('reportId').value || 'export'}.csv`;
+      a.click();
+    }
+  </script>
+</body>
+</html>
