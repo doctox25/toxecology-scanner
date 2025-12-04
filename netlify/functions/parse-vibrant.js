@@ -50,7 +50,7 @@ const MARKER_MAP = {
   'bismuth': 'BIS',
   'cesium': 'CES',
   'gadolinium': 'GAD',
-  'nickel': 'NI',
+  'nickel': 'NICK',
   'palladium': 'PALL',
   'platinum': 'PLAT',
   'tellurium': 'TELL',
@@ -127,23 +127,35 @@ const MARKER_MAP = {
   'n-acetyl propyl cysteine': 'NAPR',
   'n-acetyl (2-cyanoethyl) cysteine': 'NACE',
   'n-acetyl 2-cyanoethyl cysteine': 'NACE',
+  'n-acetyl-s-(2-cyanoethyl)-cysteine': 'NACE',
   'n-acetyl (3,4-dihydroxybutyl) cysteine': 'NADB_CYS',
   'n-acetyl 3,4-dihydroxybutyl cysteine': 'NADB_CYS',
   'n-acetyl-s-(3,4-dihydroxybutyl) cysteine': 'NADB_CYS',
   'n-acetyl-s-(3,4-dihydroxybutyl)-cysteine': 'NADB_CYS',
+  'n-acetyl-s-(3,4-dihydroxybutyl)-l-cysteine': 'NADB_CYS',
+  '3,4-dihydroxybutyl': 'NADB_CYS',
+  'dihydroxybutyl': 'NADB_CYS',
+  'dhbma': 'NADB_CYS',
   'nadb': 'NADB_CYS',
   'n-acetyl-s-(2-carbamoylethyl)-cysteine': 'NAC_2_CARB',
   'n-acetyl-s-(2-carbamoylethyl) cysteine': 'NAC_2_CARB',
   'n-acetyl (2-carbamoylethyl) cysteine': 'NAC_2_CARB',
   'n-acetyl 2-carbamoylethyl cysteine': 'NAC_2_CARB',
+  'n-acetyl-s-(2-carbamoylethyl)-l-cysteine': 'NAC_2_CARB',
   '2-carbamoylethyl': 'NAC_2_CARB',
+  'carbamoylethyl': 'NAC_2_CARB',
+  'aama': 'NAC_2_CARB',
   'phenylglyoxylic acid': 'PGO',
   'phenyl glyoxylic acid': 'PGO',
   'mandelic acid': 'MA',
   '2-hydroxyisobutyric acid': '2HIB',
   'n-acetyl (2,hydroxypropyl) cysteine': 'NAHP',
   'n-acetyl 2-hydroxypropyl cysteine': 'NAHP',
+  'n-acetyl-s-(2-hydroxypropyl)-cysteine': 'NAHP',
+  'n-acetyl-s-(2-hydroxypropyl)-l-cysteine': 'NAHP',
+  '2-hydroxypropyl': 'NAHP',
   'n-acetyl phenyl cysteine': 'NAP',
+  'n-acetyl-s-phenyl-cysteine': 'NAP',
   
   // Pesticides
   'glyphosate': 'GLYP',
@@ -172,8 +184,9 @@ function normalizeMarkerName(rawName) {
   // Clean up the name
   let cleaned = rawName.toLowerCase().trim();
   
-  // Remove parenthetical abbreviations like "(DEDTP)" or "(2MHA)"
-  cleaned = cleaned.replace(/\s*\([^)]+\)\s*/g, ' ').trim();
+  // Remove common suffixes/prefixes that don't help matching
+  cleaned = cleaned.replace(/\s*\(.*?\)\s*/g, ' ').trim(); // Remove parentheticals
+  cleaned = cleaned.replace(/-l-cysteine$/, '-cysteine'); // Normalize L-cysteine variants
   
   // Direct match first
   if (MARKER_MAP[cleaned]) {
@@ -186,6 +199,28 @@ function normalizeMarkerName(rawName) {
     return MARKER_MAP[simpler];
   }
   
+  // Special handling for N-Acetyl-S compounds (VOC markers)
+  if (cleaned.includes('n-acetyl') || cleaned.includes('nacetyl')) {
+    if (cleaned.includes('carbamoylethyl') || cleaned.includes('carbamoyl')) {
+      return 'NAC_2_CARB';
+    }
+    if (cleaned.includes('dihydroxybutyl') || cleaned.includes('3,4-dihydroxy')) {
+      return 'NADB_CYS';
+    }
+    if (cleaned.includes('cyanoethyl') || cleaned.includes('2-cyano')) {
+      return 'NACE';
+    }
+    if (cleaned.includes('hydroxypropyl') || cleaned.includes('2-hydroxy') && cleaned.includes('propyl')) {
+      return 'NAHP';
+    }
+    if (cleaned.includes('phenyl') && !cleaned.includes('glyoxylic')) {
+      return 'NAP';
+    }
+    if (cleaned.includes('propyl') && !cleaned.includes('hydroxy')) {
+      return 'NAPR';
+    }
+  }
+  
   // Try partial matches - check if any key is contained in the name
   for (const [key, value] of Object.entries(MARKER_MAP)) {
     if (cleaned.includes(key)) {
@@ -195,20 +230,21 @@ function normalizeMarkerName(rawName) {
   
   // Try reverse - check if name is contained in any key
   for (const [key, value] of Object.entries(MARKER_MAP)) {
-    if (key.includes(cleaned)) {
+    if (key.includes(cleaned) && cleaned.length > 3) {
       return value;
     }
   }
   
   // Fallback: extract abbreviation if present in parentheses from original
-  const abbrevMatch = rawName.match(/\(([A-Z0-9_-]+)\)/);
+  const abbrevMatch = rawName.match(/\(([A-Z][A-Z0-9_-]{1,10})\)/);
   if (abbrevMatch) {
     return abbrevMatch[1].replace(/-/g, '_');
   }
   
-  // Last resort: create short code from first letters
+  // Last resort: create short code from first letters (only letters)
   console.log('[Vibrant Parser] Unmapped marker:', rawName);
-  return rawName.split(/\s+/).map(w => w[0]).join('').toUpperCase().substring(0, 6);
+  const words = rawName.replace(/[^a-zA-Z\s]/g, ' ').split(/\s+/).filter(w => w.length > 0);
+  return words.map(w => w[0]).join('').toUpperCase().substring(0, 6) || 'UNK';
 }
 
 exports.handler = async (event) => {
