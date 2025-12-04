@@ -23,7 +23,7 @@ const MARKER_MAP = {
   't-2 toxin': 'T2_TOX',
   't2 toxin': 'T2_TOX',
   'deoxynivalenol': 'DON',
-  'zearalenone': 'ZEA',
+  'zearalenone': 'ZEN',
   'citrinin': 'CTN',
   'chaetoglobosin a': 'CHA',
   'enniatin b': 'ENN_B',
@@ -107,8 +107,8 @@ const MARKER_MAP = {
   // Parabens
   'methylparaben': 'M_PARA',
   'ethylparaben': 'E_PARA',
-  'propylparaben': 'P_PAR',
-  'butylparaben': 'B_PAR',
+  'propylparaben': 'P_PARA',
+  'butylparaben': 'B_PARA',
   
   // Plastics
   'bisphenol a': 'BPA',
@@ -275,7 +275,7 @@ exports.handler = async (event) => {
     const extractionPrompt = `Extract ALL test results from this Vibrant Wellness lab report PDF.
 
 For each marker/test, extract:
-- marker_name: The full name of the marker
+- marker_name: The FULL chemical name of the marker (e.g., "N-Acetyl-S-(2-carbamoylethyl)-L-cysteine" not just "N-Acetyl")
 - value: The numeric result (if "<LOD" or "ND" or "Not Detected", use 0)
 
 Return ONLY valid JSON (no markdown, no backticks):
@@ -284,15 +284,18 @@ Return ONLY valid JSON (no markdown, no backticks):
     {"marker_name": "Arsenic", "value": 12.5},
     {"marker_name": "Lead", "value": 0.3},
     {"marker_name": "Ochratoxin A", "value": 4.2},
-    {"marker_name": "Diethyldithiophosphate (DEDTP)", "value": 1.0}
+    {"marker_name": "Diethyldithiophosphate", "value": 1.0},
+    {"marker_name": "N-Acetyl-S-(2-carbamoylethyl)-L-cysteine", "value": 80.5},
+    {"marker_name": "N-Acetyl-S-(3,4-dihydroxybutyl)-L-cysteine", "value": 119.7}
   ]
 }
 
 IMPORTANT:
 - Extract ALL markers from ALL pages
-- Include both normal and elevated results
-- Use the exact marker name as shown in the report
-- Value must be a number only (no units)`;
+- Include both normal and elevated results  
+- Use the COMPLETE marker name as shown in the report (include full chemical names for N-Acetyl compounds)
+- Value must be a number only (no units)
+- Do NOT abbreviate or shorten marker names`;
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
