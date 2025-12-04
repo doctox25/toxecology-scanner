@@ -220,6 +220,41 @@ function normalizeMarkerName(rawName) {
     }
   }
   
+  // ===== PATTERN MATCHING FOR PARTIAL/ABBREVIATED NAMES =====
+  
+  // VOC N-Acetyl compounds (most problematic)
+  if (cleaned.includes('carbamoylethyl') || cleaned.includes('carbamoyl') || cleaned.includes('2-carbamoyl')) {
+    return 'NAC_2_CARB';
+  }
+  if (cleaned.includes('dihydroxybutyl') || cleaned.includes('3,4-dihydroxy') || cleaned === 'nadc' || cleaned === 'nadb') {
+    return 'NADB_CYS';
+  }
+  if (cleaned.includes('cyanoethyl') || cleaned.includes('2-cyano')) {
+    return 'NACE';
+  }
+  if (cleaned.includes('hydroxypropyl') || cleaned.includes('2-hydroxypropyl') || cleaned.includes('2,hydroxypropyl')) {
+    return 'NAHP';
+  }
+  if (cleaned === 'propyl' || (cleaned.includes('propyl') && cleaned.includes('acetyl') && !cleaned.includes('hydroxy'))) {
+    return 'NAPR';
+  }
+  if ((cleaned.includes('phenyl') && cleaned.includes('acetyl') && !cleaned.includes('glyoxylic')) || cleaned === 'nap') {
+    return 'NAP';
+  }
+  
+  // Phthalates - catch partial names
+  if (cleaned.includes('2-ethyl-5-hydroxyhexyl') || cleaned.includes('2_ethyl_5_hydroxyhexyl') || cleaned.includes('hydroxyhexyl')) {
+    return 'MEHHP';
+  }
+  if (cleaned.includes('2-ethyl-5-oxohexyl') || cleaned.includes('2_ethyl_5_oxohexyl') || cleaned.includes('oxohexyl')) {
+    return 'MEOHP';
+  }
+  
+  // Pesticides - catch partial names
+  if (cleaned.includes('4-chlorophenyl') || cleaned.includes('chlorophenyl') || cleaned.includes('bis(4-chlorophenyl)')) {
+    return 'DDA';
+  }
+  
   // Special handling for N-Acetyl-S compounds (tricky VOC markers)
   if (cleaned.includes('n-acetyl') || cleaned.includes('acetyl')) {
     if (cleaned.includes('carbamoylethyl') || cleaned.includes('carbamoyl')) {
@@ -367,16 +402,27 @@ CRITICAL INSTRUCTIONS:
     console.log('[Vibrant Parser] Extracted', parsed.markers?.length || 0, 'markers');
 
     // Format for Airtable - only the 5 fields needed
-    const airtableRecords = (parsed.markers || []).map((marker, index) => {
-      const markerId = normalizeMarkerName(marker.marker_name);
-      return {
-        result_id: `${finalReportId}-${String(index + 1).padStart(3, '0')}`,
-        report_id: finalReportId,
-        patient_id: patientId || '',
-        marker_id_inbox: markerId,
-        value: parseFloat(marker.value) || 0
-      };
-    });
+    // Filter out non-toxin validation markers
+    const SKIP_MARKERS = new Set([
+      'urine creatinine', 'urinary creatinine', 'creatinine', 'uc',
+      'specific gravity', 'sg', 'ph', 'urine ph'
+    ]);
+    
+    const airtableRecords = (parsed.markers || [])
+      .filter(marker => {
+        const name = marker.marker_name.toLowerCase().trim();
+        return !SKIP_MARKERS.has(name);
+      })
+      .map((marker, index) => {
+        const markerId = normalizeMarkerName(marker.marker_name);
+        return {
+          result_id: `${finalReportId}-${String(index + 1).padStart(3, '0')}`,
+          report_id: finalReportId,
+          patient_id: patientId || '',
+          marker_id_inbox: markerId,
+          value: parseFloat(marker.value) || 0
+        };
+      });
 
     return {
       statusCode: 200,
