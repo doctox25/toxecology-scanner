@@ -242,6 +242,7 @@
             font-weight: 600;
         }
         .hazard-high { background: rgba(255,68,68,0.2); color: #FF4444; }
+        .hazard-elevated { background: rgba(255,136,0,0.2); color: #FF8800; }
         .hazard-moderate { background: rgba(255,170,0,0.2); color: #FFAA00; }
         .hazard-low { background: rgba(0,204,102,0.2); color: #00CC66; }
         
@@ -490,11 +491,25 @@
                     <path d="M 55 90 A 40 40 0 0 1 45 90"/>
                 </g>
             </svg>
-            <p>v2.2.0 • Precision Detox Intelligence</p>
+            <p>v2.3.0 • Precision Detox Intelligence</p>
         </footer>
     </div>
 
     <script>
+        // ===========================================
+        // SCORING THRESHOLDS (v2.3.0 - Tightened)
+        // ===========================================
+        const THRESHOLDS = {
+            HIGH: 70,      // 70+ = High Risk (red)
+            ELEVATED: 45,  // 45-69 = Elevated (orange)
+            MODERATE: 20,  // 20-44 = Moderate (amber)
+            // 0-19 = Low Risk (green)
+            
+            SHOW_RECOMMENDATIONS: 40,  // Show alternatives at 40+
+            GOOD_CHOICE: 40,           // "Good Choice" badge below 40
+            DOMAIN_ELEVATED: 30        // Domain tag turns red at 30+
+        };
+
         // Elements
         const inputSection = document.getElementById('inputSection');
         const loadingSection = document.getElementById('loadingSection');
@@ -636,6 +651,37 @@
             });
         });
 
+        // ===========================================
+        // HAZARD CLASSIFICATION HELPERS
+        // ===========================================
+        function getHazardColor(score) {
+            if (score >= THRESHOLDS.HIGH) return '#FF4444';      // Red
+            if (score >= THRESHOLDS.ELEVATED) return '#FF8800';  // Orange
+            if (score >= THRESHOLDS.MODERATE) return '#FFAA00';  // Amber
+            return '#00CC66';                                     // Green
+        }
+
+        function getHazardClass(score) {
+            if (score >= THRESHOLDS.HIGH) return 'hazard-high';
+            if (score >= THRESHOLDS.ELEVATED) return 'hazard-elevated';
+            if (score >= THRESHOLDS.MODERATE) return 'hazard-moderate';
+            return 'hazard-low';
+        }
+
+        function getHazardEmoji(score) {
+            if (score >= THRESHOLDS.HIGH) return '🚨';
+            if (score >= THRESHOLDS.ELEVATED) return '⚠️';
+            if (score >= THRESHOLDS.MODERATE) return '⚡';
+            return '✅';
+        }
+
+        function getHazardLabel(score) {
+            if (score >= THRESHOLDS.HIGH) return 'High';
+            if (score >= THRESHOLDS.ELEVATED) return 'Elevated';
+            if (score >= THRESHOLDS.MODERATE) return 'Moderate';
+            return 'Low';
+        }
+
         // Main lookup function
         async function lookupProduct(barcode) {
             barcode = barcode.trim();
@@ -661,8 +707,8 @@
                 const product = data.product;
                 let substitutions = [];
 
-                // Get recommendations if high hazard
-                if (product.hazardScore >= 50) {
+                // Get recommendations if score meets threshold
+                if (product.hazardScore >= THRESHOLDS.SHOW_RECOMMENDATIONS) {
                     loadingText.textContent = 'Finding safer alternatives...';
                     try {
                         const recsResponse = await fetch(
@@ -687,12 +733,11 @@
 
         // Show results
         function showResults(product, substitutions) {
-            const hazardColor = product.hazardScore >= 50 ? '#FF4444' : 
-                               product.hazardScore >= 30 ? '#FFAA00' : '#00CC66';
-            const hazardClass = product.hazardScore >= 50 ? 'hazard-high' : 
-                               product.hazardScore >= 30 ? 'hazard-moderate' : 'hazard-low';
-            const hazardEmoji = product.hazardScore >= 50 ? '🚨' : 
-                               product.hazardScore >= 30 ? '⚠️' : '✅';
+            const score = product.hazardScore;
+            const hazardColor = getHazardColor(score);
+            const hazardClass = getHazardClass(score);
+            const hazardEmoji = getHazardEmoji(score);
+            const hazardLabel = getHazardLabel(score);
 
             let html = '';
 
@@ -718,9 +763,9 @@
                             <h2 class="product-name">${product.name || 'Unknown Product'}</h2>
                             <p class="product-category">${product.category || ''} • ${product.subCategory || ''}</p>
                         </div>
-                        <div class="score-circle" style="background: conic-gradient(${hazardColor} ${product.hazardScore}%, rgba(255,255,255,0.1) 0)">
+                        <div class="score-circle" style="background: conic-gradient(${hazardColor} ${score}%, rgba(255,255,255,0.1) 0)">
                             <div class="score-inner">
-                                <span class="score-value" style="color:${hazardColor}">${product.hazardScore}</span>
+                                <span class="score-value" style="color:${hazardColor}">${score}</span>
                                 <span class="score-label">Hazard</span>
                             </div>
                         </div>
@@ -728,7 +773,7 @@
 
                     <div class="hazard-badge ${hazardClass}">
                         <span>${hazardEmoji}</span>
-                        <span>${product.hazardLevel} Hazard</span>
+                        <span>${hazardLabel} Hazard</span>
                     </div>
 
                     ${renderDomainTags(product.domainScores)}
@@ -766,8 +811,8 @@
                 `;
             }
 
-            // Good choice message (low hazard, not new)
-            if (product.hazardScore < 50 && !product.isNew) {
+            // Good choice message (below threshold, not new)
+            if (score < THRESHOLDS.GOOD_CHOICE && !product.isNew) {
                 html += `
                     <div class="good-choice">
                         <div class="good-choice-icon">✅</div>
@@ -799,7 +844,7 @@
             return `
                 <div class="domain-tags">
                     ${domains.map(([domain, score]) => `
-                        <div class="domain-tag ${score > 40 ? 'elevated' : ''}">
+                        <div class="domain-tag ${score >= THRESHOLDS.DOMAIN_ELEVATED ? 'elevated' : ''}">
                             <span>${icons[domain] || '🔬'}</span>
                             <span>${domain}</span>
                             <strong>${score}</strong>
