@@ -183,7 +183,30 @@ const MARKER_MAP = {
   'nahp': 'NAHP',
 
   // ===== DOM_METABOLIC (1 marker) =====
-  'tiglylglycine': 'TG'
+  'tiglylglycine': 'TG',
+  
+  // ===== FALLBACK CATCHES for Claude's abbreviated extractions =====
+  '2_carbamoylethyl': 'NAC_2_CARB',
+  '2-carbamoylethyl': 'NAC_2_CARB',
+  'carbamoylethyl': 'NAC_2_CARB',
+  '4_chlorophenyl': 'DDA',
+  '4-chlorophenyl': 'DDA',
+  'chlorophenyl': 'DDA',
+  '2_ethyl_5_hydroxyhexyl': 'MEHHP',
+  '2-ethyl-5-hydroxyhexyl': 'MEHHP',
+  'hydroxyhexyl': 'MEHHP',
+  '2_ethyl_5_oxohexyl': 'MEOHP',
+  '2-ethyl-5-oxohexyl': 'MEOHP',
+  'oxohexyl': 'MEOHP',
+  '2_cyanoethyl': 'NACE',
+  '2-cyanoethyl': 'NACE',
+  'cyanoethyl': 'NACE',
+  'nadc': 'NADB_CYS',
+  'nadb': 'NADB_CYS',
+  '3_4_dihydroxybutyl': 'NADB_CYS',
+  '3,4-dihydroxybutyl': 'NADB_CYS',
+  'dihydroxybutyl': 'NADB_CYS',
+  'propyl': 'NAPR'
 };
 
 function normalizeMarkerName(rawName) {
