@@ -1,180 +1,188 @@
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 
-// Complete marker mapping: Vibrant PDF names → Your marker_id abbreviations
+// EXACT marker_id mappings from ToxEcology Marker_Vocabulary ontology
+// Format: 'vibrant pdf name (lowercase)': 'YOUR_MARKER_ID'
 const MARKER_MAP = {
-  // Mycotoxins
-  'aflatoxin b1': 'AFB1',
+  // ===== DOM_METALS (20 markers) =====
+  'mercury': 'MERC',
+  'uranium': 'URAN',
+  'cadmium': 'CAD',
+  'lead': 'LEAD',
+  'palladium': 'PALL',
+  'bismuth': 'BIS',
+  'beryllium': 'BER',
+  'antimony': 'ANT',
+  'nickel': 'NICK',
+  'thorium': 'THOR',
+  'platinum': 'PLAT',
+  'gadolinium': 'GAD',
+  'barium': 'BAR',
+  'tungsten': 'TUNG',
+  'thallium': 'THAL',
+  'arsenic': 'ARS',
+  'aluminum': 'ALU',
+  'cesium': 'CES',
+  'tin': 'TIN',
+  'tellurium': 'TELL',
+
+  // ===== DOM_MYCOTOX (31 markers) =====
   'aflatoxin b2': 'AFB2',
-  'aflatoxin g1': 'AFG1',
-  'aflatoxin g2': 'AFG2',
-  'aflatoxin m1': 'AFM1',
-  'ochratoxin a': 'OTA',
-  'gliotoxin': 'GLIO',
-  'mycophenolic acid': 'MPA',
-  'sterigmatocystin': 'STC',
-  'roridin e': 'ROR_E',
+  'aflatoxin b1': 'AFB1',
+  'dihydrocitrinone': 'DHC',
   'roridin a': 'ROR_A',
-  'roridin l2': 'ROR_L2',
-  'roridin l-2': 'ROR_L2',
+  'sterigmatocystin': 'STC',
+  'citrinin': 'CTN',
+  'nivalenol': 'NIV',
+  'aflatoxin g1': 'AFG1',
+  'mycophenolic acid': 'MPA',
+  'chaetoglobosin a': 'CHA',
   'verrucarin a': 'VER_A',
-  'verrucarin j': 'VER_J',
-  'satratoxin g': 'SAT_G',
-  'satratoxin h': 'SAT_H',
+  'enniatin b1': 'ENN_B1',
+  'gliotoxin': 'GLIO',
+  'diacetoxyscirpenol': 'DAS',
   't-2 toxin': 'T2_TOX',
   't2 toxin': 'T2_TOX',
+  'patulin': 'PAT',
   'deoxynivalenol': 'DON',
-  'zearalenone': 'ZEN',
-  'citrinin': 'CTN',
-  'chaetoglobosin a': 'CHA',
-  'enniatin b': 'ENN_B',
-  'enniatin b1': 'ENN_B1',
+  'roridin l2': 'ROR_L2',
+  'roridin l-2': 'ROR_L2',
+  'aflatoxin g2': 'AFG2',
+  'aflatoxin m1': 'AFM1',
   'fumonisin b1': 'F_B1',
   'fumonisins b1': 'F_B1',
-  'fumonisin b2': 'F_B2',
-  'fumonisins b2': 'F_B2',
+  'verrucarin j': 'VER_J',
+  'zearalenone': 'ZEN',
   'fumonisin b3': 'F_B3',
   'fumonisins b3': 'F_B3',
-  'patulin': 'PAT',
-  'dihydrocitrinone': 'DHC',
-  'diacetoxyscirpenol': 'DAS',
-  'nivalenol': 'NIV',
-  
-  // Heavy Metals
-  'arsenic': 'ARS',
-  'lead': 'LEAD',
-  'mercury': 'MERC',
-  'cadmium': 'CAD',
-  'aluminum': 'ALU',
-  'barium': 'BAR',
-  'beryllium': 'BER',
-  'bismuth': 'BIS',
-  'cesium': 'CES',
-  'gadolinium': 'GAD',
-  'nickel': 'NICK',
-  'palladium': 'PALL',
-  'platinum': 'PLAT',
-  'tellurium': 'TELL',
-  'thallium': 'THAL',
-  'thorium': 'THOR',
-  'tin': 'TIN',
-  'tungsten': 'TUNG',
-  'uranium': 'URAN',
-  'antimony': 'ANT',
-  
-  // PFAS
-  'pfos': 'PFOS',
-  'pfoa': 'PFOA',
-  'pfna': 'PFNA',
-  'pfda': 'PFDA',
-  'pfunda': 'PFUNDA',
-  'pfdoa': 'PFDOA',
-  'pftrda': 'PFTRDA',
-  'pfhxa': 'PFHXA',
-  'pfhxs': 'PFHXS',
-  'pfhpa': 'PFHPA',
-  'pfhps': 'PFHPS',
-  'pfba': 'PFBA',
-  'pfbs': 'PFBS',
-  'pfpea': 'PFPEA',
+  'roridin e': 'ROR_E',
+  'satratoxin g': 'SAT_G',
+  'fumonisin b2': 'F_B2',
+  'fumonisins b2': 'F_B2',
+  'ochratoxin a': 'OTA',
+  'satratoxin h': 'SAT_H',
+
+  // ===== DOM_PARABENS (4 markers) =====
+  'methylparaben': 'M_PARA',
+  'butylparaben': 'B_PARA',
+  'propylparaben': 'P_PARA',
+  'ethylparaben': 'E_PARA',
+
+  // ===== DOM_PESTICIDES (14 markers) =====
+  'dimethyldithiophosphate': 'DMDTP',
+  'glyphosate': 'GLYP',
+  'diethylthiophosphate': 'DETP',
+  'diethyldithiophosphate': 'DEDTP',
+  'diethyl phosphate': 'DEP',
+  '2,4-dichlorophenoxyacetic acid': '2_4_D',
+  '2,4-d': '2_4_D',
+  '2,2-bis(4-chlorophenyl) acetic acid': 'DDA',
+  'dda': 'DDA',
+  '3-phenoxybenzoic acid': '3PBA',
+  '3pba': '3PBA',
+  'atrazine': 'ATRA',
+  'dimethylthiophosphate': 'DMTP',
+  'dimethyl phosphate': 'DMP',
+  'atrazine mercapturate': 'ATRA_M',
+  'perchlorate': 'PERC',
+
+  // ===== DOM_PFAS (22 markers) =====
   'genx': 'GENX',
   'genx/hpfo-da': 'GENX',
-  'perfluorooctane sulfonic acid': 'PFOS',
+  'genx / hpfo-da': 'GENX',
+  'hpfo-da': 'GENX',
   'perfluorooctanoic acid': 'PFOA',
+  'pfoa': 'PFOA',
+  'perfluoropentanoic acid': 'PFPEA',
+  'pfpea': 'PFPEA',
+  '9-chlorohexadecafluoro-3-oxanonane-1-sulfonate': '9CL_P',
+  '9cl-p': '9CL_P',
+  'dodecafluoro-3h-4,8-dioxanoate': 'NADONA',
+  'nadona': 'NADONA',
+  'perfluoro-n-[1,2-13c2] decanoic acid': 'MPFDA',
+  'mpfda': 'MPFDA',
+  'perfluoroundecanoic acid': 'PFUNA',
+  'pfuna': 'PFUNA',
+  'perfluoroheptanoic acid': 'PFHPA',
+  'pfhpa': 'PFHPA',
+  'perfluoro-n-[1,2-13c2] hexanoic acid': 'C13_PFHXA',
+  'perfluorooctane sulfonic acid': 'PFOS',
+  'pfos': 'PFOS',
+  'perfluorohexane sulfonic acid': 'PFHXS',
+  'pfhxs': 'PFHXS',
+  'perfluorotridecanoic acid': 'PFTRDA',
+  'pftrda': 'PFTRDA',
+  'perfluorodecanoic acid': 'PFDEA',
+  'pfdea': 'PFDEA',
+  'perfluorotetradecanoic acid': 'PFTEDA',
+  'pfteda': 'PFTEDA',
+  'perfluoro-1-heptane sulfonic acid': 'PFHPS',
+  'pfhps': 'PFHPS',
   'perfluorononanoic acid': 'PFNA',
-  'perfluorodecanoic acid': 'PFDA',
-  
-  // Phthalates
+  'pfna': 'PFNA',
+  'perfluorododecanoic acid': 'PFDOA',
+  'pfdoa': 'PFDOA',
+  'perfluorobutanoic acid': 'PFBA',
+  'pfba': 'PFBA',
+  'perfluoro-1-[1,2,3,4-13c4] octanesulfonic acid': 'C13_PFOS',
+  'perfluoro-[1,2-13c2] octanoic acid': 'M2PFOA',
+  'm2pfoa': 'M2PFOA',
+  'perfluorohexanoic acid': 'PFHXA',
+  'pfhxa': 'PFHXA',
+
+  // ===== DOM_PHTHALATES (4 markers) =====
+  'mono-(2-ethyl-5-oxohexyl) phthalate': 'MEOHP',
+  'meohp': 'MEOHP',
+  'mono-(2-ethyl-5-hydroxyhexyl) phthalate': 'MEHHP',
+  'mehhp': 'MEHHP',
   'mono-ethyl phthalate': 'METP',
   'mono ethyl phthalate': 'METP',
   'metp': 'METP',
   'mono-2-ethylhexyl phthalate': 'MEHP',
   'mono 2-ethylhexyl phthalate': 'MEHP',
   'mehp': 'MEHP',
-  'mono-(2-ethyl-5-oxohexyl) phthalate': 'MEOHP',
-  'mono (2-ethyl-5-oxohexyl) phthalate': 'MEOHP',
-  'meohp': 'MEOHP',
-  'mono-(2-ethyl-5-hydroxyhexyl) phthalate': 'MEHHP',
-  'mono (2-ethyl-5-hydroxyhexyl) phthalate': 'MEHHP',
-  'mehhp': 'MEHHP',
-  'mono-n-butyl phthalate': 'MNBP',
-  'mnbp': 'MNBP',
-  'mono-isobutyl phthalate': 'MIBP',
-  'mibp': 'MIBP',
-  'mono-benzyl phthalate': 'MBZP',
-  'mbzp': 'MBZP',
-  'mcpp': 'MCPP',
-  
-  // Parabens
-  'methylparaben': 'M_PARA',
-  'ethylparaben': 'E_PARA',
-  'propylparaben': 'P_PARA',
-  'butylparaben': 'B_PARA',
-  
-  // Plastics
+
+  // ===== DOM_PLASTICS (4 markers) =====
+  '4-nonylphenol': '4_NON',
   'bisphenol a': 'BPA',
   'bpa': 'BPA',
-  'triclosan': 'TCS',
-  '4-nonylphenol': '4_NON',
   'diphenyl phosphate': 'DPP',
-  
-  // VOCs
-  '2-hydroxyethyl mercapturic acid': '2HEMA',
-  'hema': '2HEMA',
+  'dpp': 'DPP',
+  'triclosan': 'TCS',
+
+  // ===== DOM_VOC (12 markers) =====
   '2-methylhippuric acid': '2MHA',
-  '3-methylhippuric acid': '3MHA',
-  '4-methylhippuric acid': '4MHA',
-  'n-acetyl (propyl) cysteine': 'NAPR',
-  'n-acetyl propyl cysteine': 'NAPR',
-  'n-acetyl (2-cyanoethyl) cysteine': 'NACE',
-  'n-acetyl 2-cyanoethyl cysteine': 'NACE',
-  'n-acetyl-s-(2-cyanoethyl)-cysteine': 'NACE',
+  '2mha': '2MHA',
   'n-acetyl (3,4-dihydroxybutyl) cysteine': 'NADB_CYS',
-  'n-acetyl 3,4-dihydroxybutyl cysteine': 'NADB_CYS',
-  'n-acetyl-s-(3,4-dihydroxybutyl) cysteine': 'NADB_CYS',
   'n-acetyl-s-(3,4-dihydroxybutyl)-cysteine': 'NADB_CYS',
   'n-acetyl-s-(3,4-dihydroxybutyl)-l-cysteine': 'NADB_CYS',
-  '3,4-dihydroxybutyl': 'NADB_CYS',
-  'dihydroxybutyl': 'NADB_CYS',
-  'dhbma': 'NADB_CYS',
-  'nadb': 'NADB_CYS',
-  'n-acetyl-s-(2-carbamoylethyl)-cysteine': 'NAC_2_CARB',
-  'n-acetyl-s-(2-carbamoylethyl) cysteine': 'NAC_2_CARB',
-  'n-acetyl (2-carbamoylethyl) cysteine': 'NAC_2_CARB',
-  'n-acetyl 2-carbamoylethyl cysteine': 'NAC_2_CARB',
-  'n-acetyl-s-(2-carbamoylethyl)-l-cysteine': 'NAC_2_CARB',
-  '2-carbamoylethyl': 'NAC_2_CARB',
-  'carbamoylethyl': 'NAC_2_CARB',
-  'aama': 'NAC_2_CARB',
   'phenylglyoxylic acid': 'PGO',
   'phenyl glyoxylic acid': 'PGO',
-  'mandelic acid': 'MA',
-  '2-hydroxyisobutyric acid': '2HIB',
-  'n-acetyl (2,hydroxypropyl) cysteine': 'NAHP',
-  'n-acetyl 2-hydroxypropyl cysteine': 'NAHP',
-  'n-acetyl-s-(2-hydroxypropyl)-cysteine': 'NAHP',
-  'n-acetyl-s-(2-hydroxypropyl)-l-cysteine': 'NAHP',
-  '2-hydroxypropyl': 'NAHP',
+  'pgo': 'PGO',
+  'n-acetyl (propyl) cysteine': 'NAPR',
+  'n-acetyl-s-(propyl)-cysteine': 'NAPR',
+  'napr': 'NAPR',
+  '3-methylhippuric acid': '3MHA',
+  '3mha': '3MHA',
+  '2-hydroxyethyl mercapturic acid': '2HEMA',
+  'hema': '2HEMA',
+  '2hema': '2HEMA',
   'n-acetyl phenyl cysteine': 'NAP',
-  'n-acetyl-s-phenyl-cysteine': 'NAP',
-  
-  // Pesticides
-  'glyphosate': 'GLYP',
-  'perchlorate': 'PERC',
-  '2,4-d': '2_4_D',
-  '2,4-dichlorophenoxyacetic acid': '2_4_D',
-  'dda': 'DDA',
-  '2,2-bis(4-chlorophenyl) acetic acid': 'DDA',
-  'diethyl phosphate': 'DEP',
-  'dimethyl phosphate': 'DMP',
-  'diethyldithiophosphate': 'DEDTP',
-  'diethylthiophosphate': 'DETP',
-  'dimethyldithiophosphate': 'DMDTP',
-  'dimethylthiophosphate': 'DMTP',
-  '3-phenoxybenzoic acid': '3PBA',
-  'atrazine': 'ATRA',
-  'atrazine mercapturate': 'ATRA_M',
-  
-  // Mitochondrial
+  'nap': 'NAP',
+  'n-acetyl (2-cyanoethyl) cysteine': 'NACE',
+  'n-acetyl-s-(2-cyanoethyl)-cysteine': 'NACE',
+  'nace': 'NACE',
+  'n-acetyl-s-(2-carbamoylethyl)-cysteine': 'NAC_2_CARB',
+  'n-acetyl (2-carbamoylethyl) cysteine': 'NAC_2_CARB',
+  'n-acetyl-s-(2-carbamoylethyl)-l-cysteine': 'NAC_2_CARB',
+  '2-hydroxyisobutyric acid': '2HIB',
+  '2hib': '2HIB',
+  '4-methylhippuric acid': '4MHA',
+  '4mha': '4MHA',
+  'n-acetyl (2,hydroxypropyl) cysteine': 'NAHP',
+  'n-acetyl-s-(2-hydroxypropyl)-cysteine': 'NAHP',
+  'nahp': 'NAHP',
+
+  // ===== DOM_METABOLIC (1 marker) =====
   'tiglylglycine': 'TG'
 };
 
@@ -184,23 +192,36 @@ function normalizeMarkerName(rawName) {
   // Clean up the name
   let cleaned = rawName.toLowerCase().trim();
   
-  // Remove common suffixes/prefixes that don't help matching
-  cleaned = cleaned.replace(/\s*\(.*?\)\s*/g, ' ').trim(); // Remove parentheticals
-  cleaned = cleaned.replace(/-l-cysteine$/, '-cysteine'); // Normalize L-cysteine variants
+  // Remove parenthetical abbreviations like "(DEDTP)" or "(2MHA)" 
+  // but keep the content for matching
+  const parenMatch = rawName.match(/\(([A-Z0-9_-]+)\)/i);
+  const abbrevInParen = parenMatch ? parenMatch[1].toUpperCase() : null;
   
-  // Direct match first
+  cleaned = cleaned.replace(/\s*\([^)]*\)\s*/g, ' ').trim();
+  
+  // Direct match on cleaned name
   if (MARKER_MAP[cleaned]) {
     return MARKER_MAP[cleaned];
   }
   
-  // Try matching without special characters
-  const simpler = cleaned.replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
-  if (MARKER_MAP[simpler]) {
-    return MARKER_MAP[simpler];
+  // Check if abbreviation from parentheses is a direct match
+  if (abbrevInParen) {
+    const abbrevLower = abbrevInParen.toLowerCase();
+    if (MARKER_MAP[abbrevLower]) {
+      return MARKER_MAP[abbrevLower];
+    }
+    // Check if abbrev itself is a valid marker_id
+    const validIds = new Set(Object.values(MARKER_MAP));
+    if (validIds.has(abbrevInParen)) {
+      return abbrevInParen;
+    }
+    if (validIds.has(abbrevInParen.replace(/-/g, '_'))) {
+      return abbrevInParen.replace(/-/g, '_');
+    }
   }
   
-  // Special handling for N-Acetyl-S compounds (VOC markers)
-  if (cleaned.includes('n-acetyl') || cleaned.includes('nacetyl')) {
+  // Special handling for N-Acetyl-S compounds (tricky VOC markers)
+  if (cleaned.includes('n-acetyl') || cleaned.includes('acetyl')) {
     if (cleaned.includes('carbamoylethyl') || cleaned.includes('carbamoyl')) {
       return 'NAC_2_CARB';
     }
@@ -210,7 +231,7 @@ function normalizeMarkerName(rawName) {
     if (cleaned.includes('cyanoethyl') || cleaned.includes('2-cyano')) {
       return 'NACE';
     }
-    if (cleaned.includes('hydroxypropyl') || cleaned.includes('2-hydroxy') && cleaned.includes('propyl')) {
+    if (cleaned.includes('hydroxypropyl')) {
       return 'NAHP';
     }
     if (cleaned.includes('phenyl') && !cleaned.includes('glyoxylic')) {
@@ -223,28 +244,20 @@ function normalizeMarkerName(rawName) {
   
   // Try partial matches - check if any key is contained in the name
   for (const [key, value] of Object.entries(MARKER_MAP)) {
-    if (cleaned.includes(key)) {
+    if (cleaned.includes(key) && key.length > 3) {
       return value;
     }
   }
   
-  // Try reverse - check if name is contained in any key
-  for (const [key, value] of Object.entries(MARKER_MAP)) {
-    if (key.includes(cleaned) && cleaned.length > 3) {
-      return value;
-    }
+  // Fallback: use abbreviation from parentheses if present
+  if (abbrevInParen) {
+    return abbrevInParen.replace(/-/g, '_');
   }
   
-  // Fallback: extract abbreviation if present in parentheses from original
-  const abbrevMatch = rawName.match(/\(([A-Z][A-Z0-9_-]{1,10})\)/);
-  if (abbrevMatch) {
-    return abbrevMatch[1].replace(/-/g, '_');
-  }
-  
-  // Last resort: create short code from first letters (only letters)
+  // Last resort: log and create short code
   console.log('[Vibrant Parser] Unmapped marker:', rawName);
   const words = rawName.replace(/[^a-zA-Z\s]/g, ' ').split(/\s+/).filter(w => w.length > 0);
-  return words.map(w => w[0]).join('').toUpperCase().substring(0, 6) || 'UNK';
+  return words.map(w => w[0]).join('').toUpperCase().substring(0, 8) || 'UNK';
 }
 
 exports.handler = async (event) => {
@@ -274,28 +287,28 @@ exports.handler = async (event) => {
 
     const extractionPrompt = `Extract ALL test results from this Vibrant Wellness lab report PDF.
 
-For each marker/test, extract:
-- marker_name: The FULL chemical name of the marker (e.g., "N-Acetyl-S-(2-carbamoylethyl)-L-cysteine" not just "N-Acetyl")
-- value: The numeric result (if "<LOD" or "ND" or "Not Detected", use 0)
+For each marker/test result, extract:
+- marker_name: The COMPLETE name of the marker as shown (e.g., "N-Acetyl-S-(2-carbamoylethyl)-L-cysteine" or "Diethyldithiophosphate (DEDTP)")
+- value: The numeric result only (if "<LOD" or "ND" or "Not Detected", use 0)
 
-Return ONLY valid JSON (no markdown, no backticks):
+Return ONLY valid JSON (no markdown, no code blocks):
 {
   "markers": [
     {"marker_name": "Arsenic", "value": 12.5},
-    {"marker_name": "Lead", "value": 0.3},
-    {"marker_name": "Ochratoxin A", "value": 4.2},
-    {"marker_name": "Diethyldithiophosphate", "value": 1.0},
+    {"marker_name": "Diethyldithiophosphate (DEDTP)", "value": 1.0},
     {"marker_name": "N-Acetyl-S-(2-carbamoylethyl)-L-cysteine", "value": 80.5},
-    {"marker_name": "N-Acetyl-S-(3,4-dihydroxybutyl)-L-cysteine", "value": 119.7}
+    {"marker_name": "N-Acetyl (3,4-Dihydroxybutyl) Cysteine", "value": 119.7},
+    {"marker_name": "Zearalenone (ZEN)", "value": 0.19}
   ]
 }
 
-IMPORTANT:
-- Extract ALL markers from ALL pages
-- Include both normal and elevated results  
-- Use the COMPLETE marker name as shown in the report (include full chemical names for N-Acetyl compounds)
-- Value must be a number only (no units)
-- Do NOT abbreviate or shorten marker names`;
+CRITICAL INSTRUCTIONS:
+- Extract ALL markers from ALL pages of the report
+- Include both normal AND elevated results
+- Use the COMPLETE marker name exactly as shown in the PDF
+- Include any abbreviations in parentheses if shown (e.g., "Nickel" or "Zearalenone (ZEN)")
+- Value must be a number only (no units, no text)
+- Do NOT skip any markers`;
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -347,13 +360,13 @@ IMPORTANT:
       return { statusCode: 500, headers, body: JSON.stringify({ error: 'Failed to parse Claude response', raw: extractedText.substring(0, 500) }) };
     }
 
-    // Use user-provided reportId, not scraped
+    // Use user-provided reportId
     const finalReportId = reportId || `RPT-${Date.now()}`;
     
     console.log('[Vibrant Parser] Report ID:', finalReportId);
     console.log('[Vibrant Parser] Extracted', parsed.markers?.length || 0, 'markers');
 
-    // Format for Airtable - only the 5 fields you need
+    // Format for Airtable - only the 5 fields needed
     const airtableRecords = (parsed.markers || []).map((marker, index) => {
       const markerId = normalizeMarkerName(marker.marker_name);
       return {
