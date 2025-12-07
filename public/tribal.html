@@ -5,751 +5,844 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Formula Wellness Lab Parser</title>
     <style>
-        :root {
-            --navy: #0A1628;
-            --formula-green: #2D5A27;
-            --formula-gold: #C9A961;
-            --white: #FFFFFF;
-            --gray-100: #F8F9FA;
-            --gray-200: #E9ECEF;
-            --gray-600: #6C757D;
-            --red: #DC3545;
-            --yellow: #FFC107;
-            --green: #28A745;
-        }
-
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
         }
-
+        
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: var(--gray-100);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%);
             min-height: 100vh;
             padding: 20px;
         }
-
+        
         .container {
             max-width: 1200px;
             margin: 0 auto;
         }
-
-        header {
-            background: var(--formula-green);
-            color: var(--white);
+        
+        .header {
+            background: linear-gradient(135deg, #2d5a27 0%, #4a7c42 100%);
+            color: white;
             padding: 24px 32px;
-            border-radius: 12px;
-            margin-bottom: 24px;
+            border-radius: 16px 16px 0 0;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
-
-        header h1 {
+        
+        .header h1 {
             font-size: 24px;
-            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 12px;
         }
-
-        header .subtitle {
-            opacity: 0.9;
+        
+        .header .subtitle {
             font-size: 14px;
+            opacity: 0.9;
             margin-top: 4px;
         }
-
+        
         .badge {
-            background: var(--formula-gold);
-            color: var(--navy);
+            background: rgba(255,255,255,0.2);
             padding: 6px 12px;
             border-radius: 20px;
             font-size: 12px;
-            font-weight: 600;
         }
-
-        .card {
-            background: var(--white);
-            border-radius: 12px;
-            padding: 24px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        
+        .main-card {
+            background: white;
+            border-radius: 0 0 16px 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            padding: 32px;
         }
-
-        .card h2 {
+        
+        .upload-section {
+            margin-bottom: 24px;
+        }
+        
+        .upload-section h2 {
             font-size: 18px;
             margin-bottom: 16px;
-            color: var(--navy);
+            color: #333;
         }
-
-        .input-group {
-            margin-bottom: 16px;
-        }
-
-        .input-group label {
-            display: block;
-            font-size: 14px;
-            font-weight: 500;
-            margin-bottom: 6px;
-            color: var(--gray-600);
-        }
-
-        .input-group input {
-            width: 100%;
-            padding: 12px 16px;
-            border: 2px solid var(--gray-200);
-            border-radius: 8px;
-            font-size: 16px;
-            transition: border-color 0.2s;
-        }
-
-        .input-group input:focus {
-            outline: none;
-            border-color: var(--formula-green);
-        }
-
-        .upload-zone {
-            border: 2px dashed var(--gray-200);
+        
+        .drop-zone {
+            border: 2px dashed #4a7c42;
             border-radius: 12px;
-            padding: 48px 24px;
+            padding: 48px;
             text-align: center;
             cursor: pointer;
-            transition: all 0.2s;
-            background: var(--gray-100);
+            transition: all 0.3s ease;
+            background: #f8faf8;
         }
-
-        .upload-zone:hover {
-            border-color: var(--formula-green);
-            background: rgba(45, 90, 39, 0.05);
+        
+        .drop-zone:hover {
+            border-color: #2d5a27;
+            background: #f0f5f0;
         }
-
-        .upload-zone.dragover {
-            border-color: var(--formula-green);
-            background: rgba(45, 90, 39, 0.1);
+        
+        .drop-zone.drag-over {
+            border-color: #2d5a27;
+            background: #e8f0e8;
         }
-
-        .upload-zone.has-file {
-            border-color: var(--green);
-            background: rgba(40, 167, 69, 0.05);
-        }
-
-        .upload-icon {
+        
+        .drop-zone-icon {
             font-size: 48px;
-            margin-bottom: 16px;
+            margin-bottom: 12px;
         }
-
-        .upload-text {
-            font-size: 16px;
-            color: var(--gray-600);
+        
+        .drop-zone-text {
+            color: #666;
         }
-
-        .upload-text strong {
-            color: var(--formula-green);
+        
+        .drop-zone-text strong {
+            color: #4a7c42;
         }
-
+        
         .file-info {
             margin-top: 12px;
-            font-size: 14px;
-            color: var(--green);
+            color: #4a7c42;
             font-weight: 500;
         }
-
-        #fileInput {
-            display: none;
-        }
-
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            padding: 14px 28px;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .btn-primary {
-            background: var(--formula-green);
-            color: var(--white);
-        }
-
-        .btn-primary:hover:not(:disabled) {
-            background: #234a1f;
-        }
-
-        .btn-primary:disabled {
-            background: var(--gray-200);
-            color: var(--gray-600);
-            cursor: not-allowed;
-        }
-
-        .btn-secondary {
-            background: var(--formula-gold);
-            color: var(--navy);
-        }
-
-        .btn-secondary:hover {
-            background: #b8984f;
-        }
-
-        .btn-outline {
-            background: transparent;
-            border: 2px solid var(--gray-200);
-            color: var(--gray-600);
-        }
-
-        .btn-outline:hover {
-            border-color: var(--formula-green);
-            color: var(--formula-green);
-        }
-
-        .actions {
+        
+        .button-group {
             display: flex;
             gap: 12px;
-            flex-wrap: wrap;
+            margin-top: 20px;
         }
-
+        
+        .btn {
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: none;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #2d5a27 0%, #4a7c42 100%);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(45, 90, 39, 0.3);
+        }
+        
+        .btn-primary:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+        }
+        
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+        
         .status {
+            margin-top: 20px;
             padding: 16px;
             border-radius: 8px;
-            margin-bottom: 20px;
             display: none;
         }
-
-        .status.loading {
-            display: block;
-            background: rgba(45, 90, 39, 0.1);
-            color: var(--formula-green);
-        }
-
+        
         .status.error {
+            background: #fee;
+            color: #c00;
             display: block;
-            background: rgba(220, 53, 69, 0.1);
-            color: var(--red);
         }
-
+        
         .status.success {
+            background: #efe;
+            color: #060;
             display: block;
-            background: rgba(40, 167, 69, 0.1);
-            color: var(--green);
         }
-
+        
+        .status.loading {
+            background: #f8f8ff;
+            color: #666;
+            display: block;
+        }
+        
+        /* Patient Search Section */
+        .patient-search-section {
+            margin: 24px 0;
+            padding: 20px;
+            background: #f8faf8;
+            border-radius: 12px;
+            border: 1px solid #e0e8e0;
+            display: none;
+        }
+        
+        .patient-search-section.visible {
+            display: block;
+        }
+        
+        .patient-search-section h3 {
+            font-size: 16px;
+            margin-bottom: 8px;
+            color: #333;
+        }
+        
+        .patient-search-section .subtitle {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 16px;
+        }
+        
+        .pdf-patient-info {
+            background: #fff;
+            border: 1px solid #ddd;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            font-size: 14px;
+        }
+        
+        .pdf-patient-info strong {
+            color: #4a7c42;
+        }
+        
+        .search-input-wrapper {
+            position: relative;
+        }
+        
+        .search-input {
+            width: 100%;
+            padding: 12px 16px;
+            font-size: 14px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            transition: border-color 0.2s;
+        }
+        
+        .search-input:focus {
+            outline: none;
+            border-color: #4a7c42;
+        }
+        
+        .search-results {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            margin-top: 4px;
+            max-height: 300px;
+            overflow-y: auto;
+            z-index: 100;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            display: none;
+        }
+        
+        .search-results.visible {
+            display: block;
+        }
+        
+        .search-result-item {
+            padding: 12px 16px;
+            cursor: pointer;
+            border-bottom: 1px solid #eee;
+            transition: background 0.15s;
+        }
+        
+        .search-result-item:hover {
+            background: #f0f5f0;
+        }
+        
+        .search-result-item:last-child {
+            border-bottom: none;
+        }
+        
+        .search-result-name {
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .search-result-details {
+            font-size: 12px;
+            color: #666;
+            margin-top: 2px;
+        }
+        
+        .selected-patient {
+            background: #e8f5e8;
+            border: 2px solid #4a7c42;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-top: 12px;
+            display: none;
+        }
+        
+        .selected-patient.visible {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .selected-patient-info {
+            font-weight: 600;
+            color: #2d5a27;
+        }
+        
+        .clear-selection {
+            color: #c00;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        
+        .clear-selection:hover {
+            text-decoration: underline;
+        }
+        
+        /* Results Table */
+        .results-section {
+            margin-top: 24px;
+            display: none;
+        }
+        
+        .results-section.visible {
+            display: block;
+        }
+        
         .results-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 16px;
         }
-
+        
         .results-header h2 {
-            margin: 0;
+            font-size: 18px;
+            color: #333;
         }
-
-        .result-stats {
-            display: flex;
-            gap: 16px;
+        
+        .results-count {
+            background: #4a7c42;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 13px;
         }
-
-        .stat {
-            text-align: center;
-            padding: 12px 20px;
-            background: var(--gray-100);
+        
+        .results-table-wrapper {
+            overflow-x: auto;
+            border: 1px solid #e0e0e0;
             border-radius: 8px;
         }
-
-        .stat-value {
-            font-size: 24px;
-            font-weight: 700;
-            color: var(--navy);
-        }
-
-        .stat-label {
-            font-size: 12px;
-            color: var(--gray-600);
-            margin-top: 4px;
-        }
-
-        .stat.abnormal .stat-value {
-            color: var(--red);
-        }
-
-        .table-wrapper {
-            overflow-x: auto;
-            margin-top: 16px;
-        }
-
-        table {
+        
+        .results-table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 14px;
+            font-size: 13px;
         }
-
-        th {
-            background: var(--gray-100);
-            padding: 12px;
+        
+        .results-table th {
+            background: #f5f5f5;
+            padding: 12px 16px;
             text-align: left;
             font-weight: 600;
-            color: var(--navy);
-            border-bottom: 2px solid var(--gray-200);
+            color: #333;
+            border-bottom: 2px solid #ddd;
             white-space: nowrap;
         }
-
-        td {
-            padding: 12px;
-            border-bottom: 1px solid var(--gray-200);
+        
+        .results-table td {
+            padding: 10px 16px;
+            border-bottom: 1px solid #eee;
         }
-
-        tr:hover {
-            background: var(--gray-100);
+        
+        .results-table tr:hover {
+            background: #f8faf8;
         }
-
-        .flag-H, .flag-A {
-            background: rgba(220, 53, 69, 0.1);
-        }
-
-        .flag-L {
-            background: rgba(255, 193, 7, 0.1);
-        }
-
-        .flag-badge {
-            display: inline-block;
-            padding: 2px 8px;
-            border-radius: 4px;
+        
+        .flag-H {
+            color: #c00;
             font-weight: 600;
-            font-size: 12px;
         }
-
-        .flag-badge.H, .flag-badge.A {
-            background: var(--red);
-            color: var(--white);
+        
+        .flag-L {
+            color: #00c;
+            font-weight: 600;
         }
-
-        .flag-badge.L {
-            background: var(--yellow);
-            color: var(--navy);
+        
+        .flag-A {
+            color: #c60;
+            font-weight: 600;
         }
-
-        .category-badge {
-            display: inline-block;
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-size: 11px;
-            background: var(--gray-200);
-            color: var(--gray-600);
-        }
-
-        .marker-id {
-            font-family: 'Monaco', 'Menlo', monospace;
-            font-size: 12px;
-            color: var(--formula-green);
-            background: rgba(45, 90, 39, 0.1);
-            padding: 2px 6px;
-            border-radius: 4px;
-        }
-
-        .previous-value {
-            color: var(--gray-600);
-            font-size: 12px;
-        }
-
+        
         .trend-up {
-            color: var(--red);
+            color: #c00;
         }
-
+        
         .trend-down {
-            color: var(--green);
+            color: #060;
         }
-
-        #resultsCard {
+        
+        .copy-section {
+            margin-top: 20px;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+        
+        .copy-success {
+            color: #060;
+            font-size: 14px;
             display: none;
         }
-
-        .copy-feedback {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            background: var(--green);
-            color: var(--white);
-            padding: 16px 24px;
+        
+        .copy-success.visible {
+            display: inline;
+        }
+        
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #fff;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-right: 8px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Warning for no patient selected */
+        .warning-banner {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            color: #856404;
+            padding: 12px 16px;
             border-radius: 8px;
-            font-weight: 500;
-            opacity: 0;
-            transform: translateY(20px);
-            transition: all 0.3s;
-            z-index: 1000;
+            margin-bottom: 16px;
+            display: none;
         }
-
-        .copy-feedback.show {
-            opacity: 1;
-            transform: translateY(0);
-        }
-
-        .info-box {
-            background: rgba(45, 90, 39, 0.05);
-            border-left: 4px solid var(--formula-green);
-            padding: 16px;
-            margin-top: 20px;
-            border-radius: 0 8px 8px 0;
-        }
-
-        .info-box h4 {
-            font-size: 14px;
-            margin-bottom: 8px;
-            color: var(--formula-green);
-        }
-
-        .info-box p {
-            font-size: 13px;
-            color: var(--gray-600);
-            line-height: 1.5;
-        }
-
-        @media (max-width: 768px) {
-            header {
-                flex-direction: column;
-                gap: 12px;
-                text-align: center;
-            }
-
-            .result-stats {
-                flex-wrap: wrap;
-                justify-content: center;
-            }
-
-            .actions {
-                flex-direction: column;
-            }
-
-            .btn {
-                width: 100%;
-                justify-content: center;
-            }
+        
+        .warning-banner.visible {
+            display: block;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <header>
+        <div class="header">
             <div>
-                <h1>🧬 Formula Wellness Lab Parser</h1>
+                <h1>🧪 Formula Wellness Lab Parser</h1>
                 <div class="subtitle">Tribal Diagnostics PDF → Airtable Import</div>
             </div>
-            <span class="badge">Powered by HAQ</span>
-        </header>
-
-        <div class="card">
-            <h2>Upload Lab Report</h2>
-            
-            <div class="input-group">
-                <label for="patientId">Patient ID (optional)</label>
-                <input type="text" id="patientId" placeholder="e.g., FW-001 or leave blank">
-            </div>
-
-            <div class="upload-zone" id="uploadZone">
-                <div class="upload-icon">📄</div>
-                <div class="upload-text">
-                    <strong>Click to upload</strong> or drag and drop<br>
-                    Tribal Diagnostics PDF
-                </div>
-                <div class="file-info" id="fileInfo"></div>
-            </div>
-            <input type="file" id="fileInput" accept=".pdf">
-
-            <div class="actions" style="margin-top: 20px;">
-                <button class="btn btn-primary" id="extractBtn" disabled>
-                    🔬 Extract Lab Results
-                </button>
-                <button class="btn btn-outline" id="clearBtn">
-                    Clear
-                </button>
-            </div>
+            <div class="badge">Powered by HAQ</div>
         </div>
-
-        <div class="status" id="status"></div>
-
-        <div class="card" id="resultsCard">
-            <div class="results-header">
-                <h2>📊 Extracted Results</h2>
-                <div class="result-stats">
-                    <div class="stat">
-                        <div class="stat-value" id="totalMarkers">0</div>
-                        <div class="stat-label">Total Markers</div>
+        
+        <div class="main-card">
+            <div class="upload-section">
+                <h2>Upload Lab Report</h2>
+                
+                <div class="drop-zone" id="dropZone">
+                    <div class="drop-zone-icon">📄</div>
+                    <div class="drop-zone-text">
+                        <strong>Click to upload</strong> or drag and drop<br>
+                        Tribal Diagnostics PDF
                     </div>
-                    <div class="stat abnormal">
-                        <div class="stat-value" id="abnormalCount">0</div>
-                        <div class="stat-label">Flagged</div>
-                    </div>
+                    <div class="file-info" id="fileInfo"></div>
+                </div>
+                <input type="file" id="fileInput" accept=".pdf" style="display: none;">
+                
+                <div class="button-group">
+                    <button class="btn btn-primary" id="extractBtn" disabled>
+                        🧬 Extract Lab Results
+                    </button>
+                    <button class="btn btn-secondary" id="clearBtn">Clear</button>
+                </div>
+                
+                <div class="status" id="status"></div>
+            </div>
+            
+            <!-- Patient Search Section -->
+            <div class="patient-search-section" id="patientSearchSection">
+                <h3>🔍 Select Patient</h3>
+                <div class="subtitle">Match the extracted results to a patient in the system</div>
+                
+                <div class="pdf-patient-info" id="pdfPatientInfo">
+                    Patient from PDF: <strong id="pdfPatientName">—</strong>
+                </div>
+                
+                <div class="search-input-wrapper">
+                    <input type="text" 
+                           class="search-input" 
+                           id="patientSearch" 
+                           placeholder="Search by name or patient ID..."
+                           autocomplete="off">
+                    <div class="search-results" id="searchResults"></div>
+                </div>
+                
+                <div class="selected-patient" id="selectedPatient">
+                    <span class="selected-patient-info" id="selectedPatientInfo"></span>
+                    <span class="clear-selection" id="clearSelection">✕ Clear</span>
                 </div>
             </div>
-
-            <div id="reportMeta" style="margin-bottom: 16px; color: var(--gray-600); font-size: 14px;"></div>
-
-            <div class="actions">
-                <button class="btn btn-secondary" id="copyBtn">
-                    📋 Copy CSV for Airtable
-                </button>
-                <button class="btn btn-outline" id="copyFullBtn">
-                    📊 Copy Full CSV (with refs)
-                </button>
-                <button class="btn btn-outline" id="downloadBtn">
-                    💾 Download CSV
-                </button>
-            </div>
-
-            <div class="table-wrapper">
-                <table id="resultsTable">
-                    <thead>
-                        <tr>
-                            <th>Marker ID</th>
-                            <th>Original Name</th>
-                            <th>Value</th>
-                            <th>Units</th>
-                            <th>Range</th>
-                            <th>Flag</th>
-                            <th>Category</th>
-                            <th>Previous</th>
-                        </tr>
-                    </thead>
-                    <tbody id="resultsBody">
-                    </tbody>
-                </table>
-            </div>
-
-            <div class="info-box">
-                <h4>📋 How to Import to Airtable</h4>
-                <p>
-                    1. Click "Copy CSV for Airtable"<br>
-                    2. Go to your Airtable <code>results</code> table<br>
-                    3. Click first empty cell in <code>result_id</code> column<br>
-                    4. Paste (Cmd+V or Ctrl+V)<br>
-                    5. Your formulas will auto-calculate from marker_link
-                </p>
+            
+            <!-- Results Section -->
+            <div class="results-section" id="resultsSection">
+                <div class="warning-banner" id="noPatientWarning">
+                    ⚠️ No patient selected. Results will export with blank patient_id.
+                </div>
+                
+                <div class="results-header">
+                    <h2>Extracted Results</h2>
+                    <span class="results-count" id="resultsCount">0 markers</span>
+                </div>
+                
+                <div class="results-table-wrapper">
+                    <table class="results-table" id="resultsTable">
+                        <thead>
+                            <tr>
+                                <th>Marker</th>
+                                <th>Value</th>
+                                <th>Units</th>
+                                <th>Ref Range</th>
+                                <th>Flag</th>
+                                <th>Previous</th>
+                                <th>Category</th>
+                            </tr>
+                        </thead>
+                        <tbody id="resultsBody"></tbody>
+                    </table>
+                </div>
+                
+                <div class="copy-section">
+                    <button class="btn btn-primary" id="copyBtn">📋 Copy CSV for Airtable</button>
+                    <span class="copy-success" id="copySuccess">✓ Copied to clipboard!</span>
+                </div>
             </div>
         </div>
     </div>
-
-    <div class="copy-feedback" id="copyFeedback">✓ Copied to clipboard!</div>
-
+    
     <script>
-        let currentResults = [];
-        let pdfBase64 = null;
-
-        const uploadZone = document.getElementById('uploadZone');
+        // State
+        let selectedFile = null;
+        let extractedResults = [];
+        let reportId = '';
+        let pdfPatientName = '';
+        let selectedPatientId = '';
+        let selectedPatientSex = '';
+        let searchTimeout = null;
+        
+        // Elements
+        const dropZone = document.getElementById('dropZone');
         const fileInput = document.getElementById('fileInput');
         const fileInfo = document.getElementById('fileInfo');
         const extractBtn = document.getElementById('extractBtn');
         const clearBtn = document.getElementById('clearBtn');
         const status = document.getElementById('status');
-        const resultsCard = document.getElementById('resultsCard');
-
-        // File upload handling
-        uploadZone.addEventListener('click', () => fileInput.click());
-
-        uploadZone.addEventListener('dragover', (e) => {
+        const patientSearchSection = document.getElementById('patientSearchSection');
+        const pdfPatientNameEl = document.getElementById('pdfPatientName');
+        const patientSearch = document.getElementById('patientSearch');
+        const searchResults = document.getElementById('searchResults');
+        const selectedPatient = document.getElementById('selectedPatient');
+        const selectedPatientInfo = document.getElementById('selectedPatientInfo');
+        const clearSelection = document.getElementById('clearSelection');
+        const resultsSection = document.getElementById('resultsSection');
+        const resultsCount = document.getElementById('resultsCount');
+        const resultsBody = document.getElementById('resultsBody');
+        const copyBtn = document.getElementById('copyBtn');
+        const copySuccess = document.getElementById('copySuccess');
+        const noPatientWarning = document.getElementById('noPatientWarning');
+        
+        // File handling
+        dropZone.addEventListener('click', () => fileInput.click());
+        
+        dropZone.addEventListener('dragover', (e) => {
             e.preventDefault();
-            uploadZone.classList.add('dragover');
+            dropZone.classList.add('drag-over');
         });
-
-        uploadZone.addEventListener('dragleave', () => {
-            uploadZone.classList.remove('dragover');
+        
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('drag-over');
         });
-
-        uploadZone.addEventListener('drop', (e) => {
+        
+        dropZone.addEventListener('drop', (e) => {
             e.preventDefault();
-            uploadZone.classList.remove('dragover');
-            const file = e.dataTransfer.files[0];
-            if (file && file.type === 'application/pdf') {
-                handleFile(file);
+            dropZone.classList.remove('drag-over');
+            const files = e.dataTransfer.files;
+            if (files.length && files[0].type === 'application/pdf') {
+                handleFile(files[0]);
             }
         });
-
+        
         fileInput.addEventListener('change', (e) => {
-            if (e.target.files[0]) {
+            if (e.target.files.length) {
                 handleFile(e.target.files[0]);
             }
         });
-
+        
         function handleFile(file) {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                pdfBase64 = e.target.result.split(',')[1];
-                fileInfo.textContent = `✓ ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
-                uploadZone.classList.add('has-file');
-                extractBtn.disabled = false;
-            };
-            reader.readAsDataURL(file);
+            selectedFile = file;
+            fileInfo.innerHTML = `✓ ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+            extractBtn.disabled = false;
         }
-
+        
         clearBtn.addEventListener('click', () => {
-            pdfBase64 = null;
-            fileInput.value = '';
-            fileInfo.textContent = '';
-            uploadZone.classList.remove('has-file');
+            selectedFile = null;
+            fileInfo.innerHTML = '';
             extractBtn.disabled = true;
-            resultsCard.style.display = 'none';
             status.className = 'status';
-            currentResults = [];
+            status.innerHTML = '';
+            patientSearchSection.classList.remove('visible');
+            resultsSection.classList.remove('visible');
+            extractedResults = [];
+            reportId = '';
+            selectedPatientId = '';
+            selectedPatientSex = '';
+            patientSearch.value = '';
+            selectedPatient.classList.remove('visible');
+            searchResults.classList.remove('visible');
         });
-
+        
+        // Extract
         extractBtn.addEventListener('click', async () => {
-            if (!pdfBase64) return;
-
+            if (!selectedFile) return;
+            
             extractBtn.disabled = true;
+            extractBtn.innerHTML = '<span class="spinner"></span> Extracting...';
             status.className = 'status loading';
-            status.innerHTML = '🔬 Claude is reading the PDF... (30-60 seconds)';
-
+            status.innerHTML = '🔄 Processing PDF with Claude AI... This may take 30-60 seconds.';
+            
             try {
+                const base64 = await fileToBase64(selectedFile);
+                
                 const response = await fetch('/.netlify/functions/parse-tribal', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        pdfBase64: pdfBase64,
-                        patientId: document.getElementById('patientId').value
+                        pdfBase64: base64,
+                        patientId: '' // Will be set after patient selection
                     })
                 });
-
+                
                 const data = await response.json();
-
-                if (!response.ok || !data.success) {
-                    throw new Error(data.error || 'Failed to parse PDF');
+                
+                if (!response.ok) {
+                    throw new Error(data.error || 'Extraction failed');
                 }
-
-                currentResults = data.results;
-                displayResults(data);
+                
+                extractedResults = data.results;
+                reportId = data.report_id;
+                pdfPatientName = data.patient_name || 'Not found in PDF';
                 
                 status.className = 'status success';
-                status.innerHTML = `✓ Extracted ${data.total_markers} markers from report ${data.report_id}`;
-
+                status.innerHTML = `✓ Extracted ${data.count} markers from report ${reportId}`;
+                
+                // Show patient search
+                pdfPatientNameEl.textContent = pdfPatientName;
+                patientSearchSection.classList.add('visible');
+                
+                // Pre-populate search with PDF patient name
+                if (pdfPatientName && pdfPatientName !== 'Not found in PDF') {
+                    patientSearch.value = pdfPatientName.split(' ')[0]; // First name
+                    searchPatients(patientSearch.value);
+                }
+                
+                // Render results
+                renderResults();
+                resultsSection.classList.add('visible');
+                updateWarningBanner();
+                
             } catch (error) {
                 status.className = 'status error';
-                status.innerHTML = `❌ Error: ${error.message}`;
-                console.error(error);
+                status.innerHTML = `✕ Error: ${error.message}`;
             } finally {
                 extractBtn.disabled = false;
+                extractBtn.innerHTML = '🧬 Extract Lab Results';
             }
         });
-
-        function displayResults(data) {
-            document.getElementById('reportMeta').innerHTML = `
-                <strong>Report ID:</strong> ${data.report_id} &nbsp;|&nbsp;
-                <strong>Patient:</strong> ${data.patient_name || 'N/A'} &nbsp;|&nbsp;
-                <strong>Date:</strong> ${data.sample_date || 'N/A'}
-            `;
-
-            document.getElementById('totalMarkers').textContent = data.total_markers;
-            
-            const abnormalCount = currentResults.filter(r => r.flag).length;
-            document.getElementById('abnormalCount').textContent = abnormalCount;
-
-            const tbody = document.getElementById('resultsBody');
-            tbody.innerHTML = '';
-
-            for (const result of currentResults) {
-                const row = document.createElement('tr');
-                if (result.flag) {
-                    row.className = `flag-${result.flag}`;
-                }
-
-                // Determine trend
-                let trendHtml = '';
-                if (result.previous_value) {
-                    if (result.value > result.previous_value) {
-                        trendHtml = `<span class="trend-up">↑</span>`;
-                    } else if (result.value < result.previous_value) {
-                        trendHtml = `<span class="trend-down">↓</span>`;
-                    }
-                }
-
-                row.innerHTML = `
-                    <td><span class="marker-id">${result.marker_id_inbox}</span></td>
-                    <td>${result.marker_name_original}</td>
-                    <td><strong>${result.value}</strong></td>
-                    <td>${result.units}</td>
-                    <td>${result.ref_low || ''} - ${result.ref_high || ''}</td>
-                    <td>${result.flag ? `<span class="flag-badge ${result.flag}">${result.flag}</span>` : ''}</td>
-                    <td><span class="category-badge">${result.category || ''}</span></td>
-                    <td class="previous-value">${result.previous_value ? `${result.previous_value} ${trendHtml}` : ''}</td>
-                `;
-                tbody.appendChild(row);
-            }
-
-            resultsCard.style.display = 'block';
-        }
-
-        // Copy functionality
-        document.getElementById('copyBtn').addEventListener('click', () => {
-            // Basic columns for Airtable paste
-            const headers = ['result_id', 'report_id', 'patient_id', 'marker_id_inbox', 'value'];
-            const rows = currentResults.map(r => [
-                r.result_id,
-                r.report_id,
-                r.patient_id,
-                r.marker_id_inbox,
-                r.value
-            ]);
-            
-            const csv = [headers, ...rows].map(row => row.join('\t')).join('\n');
-            copyToClipboard(csv);
-        });
-
-        document.getElementById('copyFullBtn').addEventListener('click', () => {
-            // Full columns including refs and previous
-            const headers = ['result_id', 'report_id', 'patient_id', 'marker_id_inbox', 'value', 'units', 'ref_low', 'ref_high', 'flag', 'category', 'previous_value', 'previous_date'];
-            const rows = currentResults.map(r => [
-                r.result_id,
-                r.report_id,
-                r.patient_id,
-                r.marker_id_inbox,
-                r.value,
-                r.units,
-                r.ref_low || '',
-                r.ref_high || '',
-                r.flag,
-                r.category,
-                r.previous_value || '',
-                r.previous_date || ''
-            ]);
-            
-            const csv = [headers, ...rows].map(row => row.join('\t')).join('\n');
-            copyToClipboard(csv);
-        });
-
-        document.getElementById('downloadBtn').addEventListener('click', () => {
-            const headers = ['result_id', 'report_id', 'patient_id', 'marker_id_inbox', 'marker_name_original', 'value', 'units', 'ref_low', 'ref_high', 'flag', 'category', 'previous_value', 'previous_date'];
-            const rows = currentResults.map(r => [
-                r.result_id,
-                r.report_id,
-                r.patient_id,
-                r.marker_id_inbox,
-                `"${r.marker_name_original}"`,
-                r.value,
-                r.units,
-                r.ref_low || '',
-                r.ref_high || '',
-                r.flag,
-                r.category,
-                r.previous_value || '',
-                r.previous_date || ''
-            ]);
-            
-            const csv = [headers, ...rows].map(row => row.join(',')).join('\n');
-            const blob = new Blob([csv], { type: 'text/csv' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `formula_labs_${currentResults[0]?.report_id || 'export'}.csv`;
-            a.click();
-        });
-
-        function copyToClipboard(text) {
-            navigator.clipboard.writeText(text).then(() => {
-                const feedback = document.getElementById('copyFeedback');
-                feedback.classList.add('show');
-                setTimeout(() => feedback.classList.remove('show'), 2000);
+        
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => {
+                    const base64 = reader.result.split(',')[1];
+                    resolve(base64);
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
             });
         }
+        
+        // Patient search
+        patientSearch.addEventListener('input', (e) => {
+            const query = e.target.value.trim();
+            
+            if (searchTimeout) clearTimeout(searchTimeout);
+            
+            if (query.length < 2) {
+                searchResults.classList.remove('visible');
+                return;
+            }
+            
+            searchTimeout = setTimeout(() => searchPatients(query), 300);
+        });
+        
+        patientSearch.addEventListener('focus', () => {
+            if (patientSearch.value.length >= 2) {
+                searchPatients(patientSearch.value);
+            }
+        });
+        
+        async function searchPatients(query) {
+            try {
+                const response = await fetch(`/.netlify/functions/get-patients?q=${encodeURIComponent(query)}`);
+                const data = await response.json();
+                
+                if (data.success && data.patients.length > 0) {
+                    renderSearchResults(data.patients);
+                    searchResults.classList.add('visible');
+                } else {
+                    searchResults.innerHTML = '<div class="search-result-item">No patients found</div>';
+                    searchResults.classList.add('visible');
+                }
+            } catch (error) {
+                console.error('Search error:', error);
+            }
+        }
+        
+        function renderSearchResults(patients) {
+            searchResults.innerHTML = patients.map(p => `
+                <div class="search-result-item" 
+                     data-patient-id="${p.patient_id}" 
+                     data-patient-sex="${p.biological_sex || ''}"
+                     data-display="${p.display}">
+                    <div class="search-result-name">${p.last_name}, ${p.first_name}</div>
+                    <div class="search-result-details">
+                        ID: ${p.patient_id} ${p.dob ? '| DOB: ' + p.dob : ''} ${p.biological_sex ? '| ' + p.biological_sex : ''}
+                    </div>
+                </div>
+            `).join('');
+            
+            // Add click handlers
+            searchResults.querySelectorAll('.search-result-item').forEach(item => {
+                item.addEventListener('click', () => selectPatient(item));
+            });
+        }
+        
+        function selectPatient(item) {
+            selectedPatientId = item.dataset.patientId;
+            selectedPatientSex = item.dataset.patientSex;
+            const display = item.dataset.display;
+            
+            selectedPatientInfo.textContent = display;
+            selectedPatient.classList.add('visible');
+            searchResults.classList.remove('visible');
+            patientSearch.value = '';
+            
+            // Update all results with patient ID
+            extractedResults.forEach(r => r.patient_id = selectedPatientId);
+            renderResults();
+            updateWarningBanner();
+        }
+        
+        clearSelection.addEventListener('click', () => {
+            selectedPatientId = '';
+            selectedPatientSex = '';
+            selectedPatient.classList.remove('visible');
+            extractedResults.forEach(r => r.patient_id = '');
+            renderResults();
+            updateWarningBanner();
+        });
+        
+        function updateWarningBanner() {
+            if (selectedPatientId) {
+                noPatientWarning.classList.remove('visible');
+            } else {
+                noPatientWarning.classList.add('visible');
+            }
+        }
+        
+        // Close search results when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.search-input-wrapper')) {
+                searchResults.classList.remove('visible');
+            }
+        });
+        
+        // Render results table
+        function renderResults() {
+            resultsCount.textContent = `${extractedResults.length} markers`;
+            
+            resultsBody.innerHTML = extractedResults.map(r => {
+                let flagClass = '';
+                if (r.flag === 'H') flagClass = 'flag-H';
+                else if (r.flag === 'L') flagClass = 'flag-L';
+                else if (r.flag === 'A') flagClass = 'flag-A';
+                
+                let trend = '';
+                if (r.previous_value && r.value) {
+                    const prev = parseFloat(r.previous_value);
+                    const curr = parseFloat(r.value);
+                    if (curr > prev) trend = '<span class="trend-up">↑</span>';
+                    else if (curr < prev) trend = '<span class="trend-down">↓</span>';
+                }
+                
+                const refRange = [r.ref_low, r.ref_high].filter(v => v !== null && v !== '').join(' - ') || '—';
+                
+                return `
+                    <tr>
+                        <td><strong>${r.marker_name_original}</strong><br><small style="color:#888">${r.marker_id_inbox}</small></td>
+                        <td>${r.value}</td>
+                        <td>${r.units || ''}</td>
+                        <td>${refRange}</td>
+                        <td class="${flagClass}">${r.flag || ''}</td>
+                        <td>${r.previous_value || ''} ${trend}</td>
+                        <td>${r.category || ''}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+        
+        // Copy CSV
+        copyBtn.addEventListener('click', () => {
+            const headers = ['result_id', 'report_id', 'patient_id', 'marker_id_inbox', 'marker_name_original', 'value', 'units', 'ref_low', 'ref_high', 'flag', 'category', 'previous_value', 'previous_date'];
+            
+            const rows = extractedResults.map(r => [
+                r.result_id,
+                r.report_id,
+                selectedPatientId || r.patient_id || '',
+                r.marker_id_inbox,
+                r.marker_name_original,
+                r.value,
+                r.units || '',
+                r.ref_low || '',
+                r.ref_high || '',
+                r.flag || '',
+                r.category || '',
+                r.previous_value || '',
+                r.previous_date || ''
+            ].join('\t'));
+            
+            const csv = [headers.join('\t'), ...rows].join('\n');
+            
+            navigator.clipboard.writeText(csv).then(() => {
+                copySuccess.classList.add('visible');
+                setTimeout(() => copySuccess.classList.remove('visible'), 3000);
+            });
+        });
     </script>
 </body>
 </html>
