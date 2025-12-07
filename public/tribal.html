@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Formula Wellness Lab Parser</title>
+    <style>
+        :root {
+            --navy: #0A1628;
+            --formula-green: #2D5A27;
+            --formula-gold: #C9A961;
+            --white: #FFFFFF;
+            --gray-100: #F8F9FA;
+            --gray-200: #E9ECEF;
+            --gray-600: #6C757D;
+            --red: #DC3545;
+            --yellow: #FFC107;
+            --green: #28A745;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--gray-100);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            background: var(--formula-green);
+            color: var(--white);
+            padding: 24px 32px;
+            border-radius: 12px;
+            margin-bottom: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        header h1 {
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        header .subtitle {
+            opacity: 0.9;
+            font-size: 14px;
+            margin-top: 4px;
+        }
+
+        .badge {
+            background: var(--formula-gold);
+            color: var(--navy);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .card {
+            background: var(--white);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .card h2 {
+            font-size: 18px;
+            margin-bottom: 16px;
+            color: var(--navy);
+        }
+
+        .input-group {
+            margin-bottom: 16px;
+        }
+
+        .input-group label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 6px;
+            color: var(--gray-600);
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid var(--gray-200);
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.2s;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: var(--formula-green);
+        }
+
+        .upload-zone {
+            border: 2px dashed var(--gray-200);
+            border-radius: 12px;
+            padding: 48px 24px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: var(--gray-100);
+        }
+
+        .upload-zone:hover {
+            border-color: var(--formula-green);
+            background: rgba(45, 90, 39, 0.05);
+        }
+
+        .upload-zone.dragover {
+            border-color: var(--formula-green);
+            background: rgba(45, 90, 39, 0.1);
+        }
+
+        .upload-zone.has-file {
+            border-color: var(--green);
+            background: rgba(40, 167, 69, 0.05);
+        }
+
+        .upload-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        .upload-text {
+            font-size: 16px;
+            color: var(--gray-600);
+        }
+
+        .upload-text strong {
+            color: var(--formula-green);
+        }
+
+        .file-info {
+            margin-top: 12px;
+            font-size: 14px;
+            color: var(--green);
+            font-weight: 500;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 14px 28px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: var(--formula-green);
+            color: var(--white);
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: #234a1f;
+        }
+
+        .btn-primary:disabled {
+            background: var(--gray-200);
+            color: var(--gray-600);
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background: var(--formula-gold);
+            color: var(--navy);
+        }
+
+        .btn-secondary:hover {
+            background: #b8984f;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 2px solid var(--gray-200);
+            color: var(--gray-600);
+        }
+
+        .btn-outline:hover {
+            border-color: var(--formula-green);
+            color: var(--formula-green);
+        }
+
+        .actions {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .status {
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .status.loading {
+            display: block;
+            background: rgba(45, 90, 39, 0.1);
+            color: var(--formula-green);
+        }
+
+        .status.error {
+            display: block;
+            background: rgba(220, 53, 69, 0.1);
+            color: var(--red);
+        }
+
+        .status.success {
+            display: block;
+            background: rgba(40, 167, 69, 0.1);
+            color: var(--green);
+        }
+
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .results-header h2 {
+            margin: 0;
+        }
+
+        .result-stats {
+            display: flex;
+            gap: 16px;
+        }
+
+        .stat {
+            text-align: center;
+            padding: 12px 20px;
+            background: var(--gray-100);
+            border-radius: 8px;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--navy);
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: var(--gray-600);
+            margin-top: 4px;
+        }
+
+        .stat.abnormal .stat-value {
+            color: var(--red);
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+            margin-top: 16px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+        th {
+            background: var(--gray-100);
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            color: var(--navy);
+            border-bottom: 2px solid var(--gray-200);
+            white-space: nowrap;
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        tr:hover {
+            background: var(--gray-100);
+        }
+
+        .flag-H, .flag-A {
+            background: rgba(220, 53, 69, 0.1);
+        }
+
+        .flag-L {
+            background: rgba(255, 193, 7, 0.1);
+        }
+
+        .flag-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 12px;
+        }
+
+        .flag-badge.H, .flag-badge.A {
+            background: var(--red);
+            color: var(--white);
+        }
+
+        .flag-badge.L {
+            background: var(--yellow);
+            color: var(--navy);
+        }
+
+        .category-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            background: var(--gray-200);
+            color: var(--gray-600);
+        }
+
+        .marker-id {
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 12px;
+            color: var(--formula-green);
+            background: rgba(45, 90, 39, 0.1);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        .previous-value {
+            color: var(--gray-600);
+            font-size: 12px;
+        }
+
+        .trend-up {
+            color: var(--red);
+        }
+
+        .trend-down {
+            color: var(--green);
+        }
+
+        #resultsCard {
+            display: none;
+        }
+
+        .copy-feedback {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: var(--green);
+            color: var(--white);
+            padding: 16px 24px;
+            border-radius: 8px;
+            font-weight: 500;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.3s;
+            z-index: 1000;
+        }
+
+        .copy-feedback.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .info-box {
+            background: rgba(45, 90, 39, 0.05);
+            border-left: 4px solid var(--formula-green);
+            padding: 16px;
+            margin-top: 20px;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .info-box h4 {
+            font-size: 14px;
+            margin-bottom: 8px;
+            color: var(--formula-green);
+        }
+
+        .info-box p {
+            font-size: 13px;
+            color: var(--gray-600);
+            line-height: 1.5;
+        }
+
+        @media (max-width: 768px) {
+            header {
+                flex-direction: column;
+                gap: 12px;
+                text-align: center;
+            }
+
+            .result-stats {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+
+            .actions {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div>
+                <h1>🧬 Formula Wellness Lab Parser</h1>
+                <div class="subtitle">Tribal Diagnostics PDF → Airtable Import</div>
+            </div>
+            <span class="badge">Powered by HAQ</span>
+        </header>
+
+        <div class="card">
+            <h2>Upload Lab Report</h2>
+            
+            <div class="input-group">
+                <label for="patientId">Patient ID (optional)</label>
+                <input type="text" id="patientId" placeholder="e.g., FW-001 or leave blank">
+            </div>
+
+            <div class="upload-zone" id="uploadZone">
+                <div class="upload-icon">📄</div>
+                <div class="upload-text">
+                    <strong>Click to upload</strong> or drag and drop<br>
+                    Tribal Diagnostics PDF
+                </div>
+                <div class="file-info" id="fileInfo"></div>
+            </div>
+            <input type="file" id="fileInput" accept=".pdf">
+
+            <div class="actions" style="margin-top: 20px;">
+                <button class="btn btn-primary" id="extractBtn" disabled>
+                    🔬 Extract Lab Results
+                </button>
+                <button class="btn btn-outline" id="clearBtn">
+                    Clear
+                </button>
+            </div>
+        </div>
+
+        <div class="status" id="status"></div>
+
+        <div class="card" id="resultsCard">
+            <div class="results-header">
+                <h2>📊 Extracted Results</h2>
+                <div class="result-stats">
+                    <div class="stat">
+                        <div class="stat-value" id="totalMarkers">0</div>
+                        <div class="stat-label">Total Markers</div>
+                    </div>
+                    <div class="stat abnormal">
+                        <div class="stat-value" id="abnormalCount">0</div>
+                        <div class="stat-label">Flagged</div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="reportMeta" style="margin-bottom: 16px; color: var(--gray-600); font-size: 14px;"></div>
+
+            <div class="actions">
+                <button class="btn btn-secondary" id="copyBtn">
+                    📋 Copy CSV for Airtable
+                </button>
+                <button class="btn btn-outline" id="copyFullBtn">
+                    📊 Copy Full CSV (with refs)
+                </button>
+                <button class="btn btn-outline" id="downloadBtn">
+                    💾 Download CSV
+                </button>
+            </div>
+
+            <div class="table-wrapper">
+                <table id="resultsTable">
+                    <thead>
+                        <tr>
+                            <th>Marker ID</th>
+                            <th>Original Name</th>
+                            <th>Value</th>
+                            <th>Units</th>
+                            <th>Range</th>
+                            <th>Flag</th>
+                            <th>Category</th>
+                            <th>Previous</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultsBody">
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="info-box">
+                <h4>📋 How to Import to Airtable</h4>
+                <p>
+                    1. Click "Copy CSV for Airtable"<br>
+                    2. Go to your Airtable <code>results</code> table<br>
+                    3. Click first empty cell in <code>result_id</code> column<br>
+                    4. Paste (Cmd+V or Ctrl+V)<br>
+                    5. Your formulas will auto-calculate from marker_link
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="copy-feedback" id="copyFeedback">✓ Copied to clipboard!</div>
+
+    <script>
+        let currentResults = [];
+        let pdfBase64 = null;
+
+        const uploadZone = document.getElementById('uploadZone');
+        const fileInput = document.getElementById('fileInput');
+        const fileInfo = document.getElementById('fileInfo');
+        const extractBtn = document.getElementById('extractBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const status = document.getElementById('status');
+        const resultsCard = document.getElementById('resultsCard');
+
+        // File upload handling
+        uploadZone.addEventListener('click', () => fileInput.click());
+
+        uploadZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadZone.classList.add('dragover');
+        });
+
+        uploadZone.addEventListener('dragleave', () => {
+            uploadZone.classList.remove('dragover');
+        });
+
+        uploadZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadZone.classList.remove('dragover');
+            const file = e.dataTransfer.files[0];
+            if (file && file.type === 'application/pdf') {
+                handleFile(file);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files[0]) {
+                handleFile(e.target.files[0]);
+            }
+        });
+
+        function handleFile(file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                pdfBase64 = e.target.result.split(',')[1];
+                fileInfo.textContent = `✓ ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+                uploadZone.classList.add('has-file');
+                extractBtn.disabled = false;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        clearBtn.addEventListener('click', () => {
+            pdfBase64 = null;
+            fileInput.value = '';
+            fileInfo.textContent = '';
+            uploadZone.classList.remove('has-file');
+            extractBtn.disabled = true;
+            resultsCard.style.display = 'none';
+            status.className = 'status';
+            currentResults = [];
+        });
+
+        extractBtn.addEventListener('click', async () => {
+            if (!pdfBase64) return;
+
+            extractBtn.disabled = true;
+            status.className = 'status loading';
+            status.innerHTML = '🔬 Claude is reading the PDF... (30-60 seconds)';
+
+            try {
+                const response = await fetch('/.netlify/functions/parse-tribal', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        pdf_base64: pdfBase64,
+                        patient_id: document.getElementById('patientId').value
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok || !data.success) {
+                    throw new Error(data.error || 'Failed to parse PDF');
+                }
+
+                currentResults = data.results;
+                displayResults(data);
+                
+                status.className = 'status success';
+                status.innerHTML = `✓ Extracted ${data.total_markers} markers from report ${data.report_id}`;
+
+            } catch (error) {
+                status.className = 'status error';
+                status.innerHTML = `❌ Error: ${error.message}`;
+                console.error(error);
+            } finally {
+                extractBtn.disabled = false;
+            }
+        });
+
+        function displayResults(data) {
+            document.getElementById('reportMeta').innerHTML = `
+                <strong>Report ID:</strong> ${data.report_id} &nbsp;|&nbsp;
+                <strong>Patient:</strong> ${data.patient_name || 'N/A'} &nbsp;|&nbsp;
+                <strong>Date:</strong> ${data.sample_date || 'N/A'}
+            `;
+
+            document.getElementById('totalMarkers').textContent = data.total_markers;
+            
+            const abnormalCount = currentResults.filter(r => r.flag).length;
+            document.getElementById('abnormalCount').textContent = abnormalCount;
+
+            const tbody = document.getElementById('resultsBody');
+            tbody.innerHTML = '';
+
+            for (const result of currentResults) {
+                const row = document.createElement('tr');
+                if (result.flag) {
+                    row.className = `flag-${result.flag}`;
+                }
+
+                // Determine trend
+                let trendHtml = '';
+                if (result.previous_value) {
+                    if (result.value > result.previous_value) {
+                        trendHtml = `<span class="trend-up">↑</span>`;
+                    } else if (result.value < result.previous_value) {
+                        trendHtml = `<span class="trend-down">↓</span>`;
+                    }
+                }
+
+                row.innerHTML = `
+                    <td><span class="marker-id">${result.marker_id_inbox}</span></td>
+                    <td>${result.marker_name_original}</td>
+                    <td><strong>${result.value}</strong></td>
+                    <td>${result.units}</td>
+                    <td>${result.ref_low || ''} - ${result.ref_high || ''}</td>
+                    <td>${result.flag ? `<span class="flag-badge ${result.flag}">${result.flag}</span>` : ''}</td>
+                    <td><span class="category-badge">${result.category || ''}</span></td>
+                    <td class="previous-value">${result.previous_value ? `${result.previous_value} ${trendHtml}` : ''}</td>
+                `;
+                tbody.appendChild(row);
+            }
+
+            resultsCard.style.display = 'block';
+        }
+
+        // Copy functionality
+        document.getElementById('copyBtn').addEventListener('click', () => {
+            // Basic columns for Airtable paste
+            const headers = ['result_id', 'report_id', 'patient_id', 'marker_id_inbox', 'value'];
+            const rows = currentResults.map(r => [
+                r.result_id,
+                r.report_id,
+                r.patient_id,
+                r.marker_id_inbox,
+                r.value
+            ]);
+            
+            const csv = [headers, ...rows].map(row => row.join('\t')).join('\n');
+            copyToClipboard(csv);
+        });
+
+        document.getElementById('copyFullBtn').addEventListener('click', () => {
+            // Full columns including refs and previous
+            const headers = ['result_id', 'report_id', 'patient_id', 'marker_id_inbox', 'value', 'units', 'ref_low', 'ref_high', 'flag', 'category', 'previous_value', 'previous_date'];
+            const rows = currentResults.map(r => [
+                r.result_id,
+                r.report_id,
+                r.patient_id,
+                r.marker_id_inbox,
+                r.value,
+                r.units,
+                r.ref_low || '',
+                r.ref_high || '',
+                r.flag,
+                r.category,
+                r.previous_value || '',
+                r.previous_date || ''
+            ]);
+            
+            const csv = [headers, ...rows].map(row => row.join('\t')).join('\n');
+            copyToClipboard(csv);
+        });
+
+        document.getElementById('downloadBtn').addEventListener('click', () => {
+            const headers = ['result_id', 'report_id', 'patient_id', 'marker_id_inbox', 'marker_name_original', 'value', 'units', 'ref_low', 'ref_high', 'flag', 'category', 'previous_value', 'previous_date'];
+            const rows = currentResults.map(r => [
+                r.result_id,
+                r.report_id,
+                r.patient_id,
+                r.marker_id_inbox,
+                `"${r.marker_name_original}"`,
+                r.value,
+                r.units,
+                r.ref_low || '',
+                r.ref_high || '',
+                r.flag,
+                r.category,
+                r.previous_value || '',
+                r.previous_date || ''
+            ]);
+            
+            const csv = [headers, ...rows].map(row => row.join(',')).join('\n');
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `formula_labs_${currentResults[0]?.report_id || 'export'}.csv`;
+            a.click();
+        });
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                const feedback = document.getElementById('copyFeedback');
+                feedback.classList.add('show');
+                setTimeout(() => feedback.classList.remove('show'), 2000);
+            });
+        }
+    </script>
+</body>
+</html>
