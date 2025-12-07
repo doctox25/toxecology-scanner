@@ -11,6 +11,5 @@
 [functions."product-lookup"]
   timeout = 15
 
-[[functions]]
-     path = "/.netlify/functions/parse-tribal"
-     timeout = 60
+[functions."parse-tribal"]
+  timeout = 60
