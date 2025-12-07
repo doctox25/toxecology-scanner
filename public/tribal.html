@@ -531,8 +531,9 @@
                 </div>
                 
                 <div class="copy-section">
-                    <button class="btn btn-primary" id="copyBtn">📋 Copy CSV for Airtable</button>
-                    <span class="copy-success" id="copySuccess">✓ Copied to clipboard!</span>
+                    <button class="btn btn-primary" id="downloadBtn">⬇️ Download CSV</button>
+                    <button class="btn btn-secondary" id="copyBtn">📋 Copy to Clipboard</button>
+                    <span class="copy-success" id="copySuccess">✓ Copied!</span>
                 </div>
             </div>
         </div>
@@ -570,6 +571,7 @@
         const resultsCount = document.getElementById('resultsCount');
         const resultsBody = document.getElementById('resultsBody');
         const copyBtn = document.getElementById('copyBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
         const copySuccess = document.getElementById('copySuccess');
         const noPatientWarning = document.getElementById('noPatientWarning');
         
@@ -832,6 +834,30 @@
         
         // Copy CSV
         copyBtn.addEventListener('click', () => {
+            const csv = generateCSV();
+            
+            navigator.clipboard.writeText(csv).then(() => {
+                copySuccess.classList.add('visible');
+                setTimeout(() => copySuccess.classList.remove('visible'), 3000);
+            });
+        });
+        
+        // Download CSV
+        downloadBtn.addEventListener('click', () => {
+            const csv = generateCSV();
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `${reportId}_results.csv`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        });
+        
+        // Generate CSV string
+        function generateCSV() {
             const headers = ['result_id', 'report_id', 'patient_id', 'marker_id_inbox', 'marker_name_original', 'value', 'units', 'ref_low', 'ref_high', 'flag', 'category', 'previous_value', 'previous_date'];
             
             const rows = extractedResults.map(r => [
@@ -839,7 +865,7 @@
                 r.report_id,
                 selectedPatientId || r.patient_id || '',
                 r.marker_id_inbox,
-                r.marker_name_original,
+                `"${(r.marker_name_original || '').replace(/"/g, '""')}"`,
                 r.value,
                 r.units || '',
                 r.ref_low || '',
@@ -848,15 +874,10 @@
                 r.category || '',
                 r.previous_value || '',
                 r.previous_date || ''
-            ].join('\t'));
+            ].join(','));
             
-            const csv = [headers.join('\t'), ...rows].join('\n');
-            
-            navigator.clipboard.writeText(csv).then(() => {
-                copySuccess.classList.add('visible');
-                setTimeout(() => copySuccess.classList.remove('visible'), 3000);
-            });
-        });
+            return [headers.join(','), ...rows].join('\n');
+        }
     </script>
 </body>
 </html>
