@@ -1,433 +1,347 @@
-// parse-tribal.js
-// Netlify function to extract lab results from Tribal Diagnostics PDFs
-// For Formula Wellness longevity biomarkers
+const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 
+// Marker mappings for Formula Wellness / Tribal Diagnostics labs
 const MARKER_MAP = {
   // === HORMONES ===
-  'Testosterone': 'TEST',
-  'Total Testosterone': 'TEST',
-  'Free Testosterone': 'FREE_T',
-  'Calc Free Testosterone': 'FREE_T',
-  'Sex Hormone Binding Globulin': 'SHBG',
-  'SHBG': 'SHBG',
-  'Follicle Stim Hormone': 'FSH',
-  'FSH': 'FSH',
-  'Luteinizing Hormone': 'LH',
-  'LH': 'LH',
-  'Estradiol': 'E2',
-  'DHEA Sulfate': 'DHEAS',
-  'DHEA-S': 'DHEAS',
-  'Prolactin': 'PRL',
-  'Cortisol': 'CORTISOL',
-  'Cortisol, Random': 'CORTISOL',
-  'Progesterone': 'PROG',
+  'testosterone': 'TEST',
+  'total testosterone': 'TEST',
+  'free testosterone': 'FREE_T',
+  'calc free testosterone': 'FREE_T',
+  'sex hormone binding globulin': 'SHBG',
+  'shbg': 'SHBG',
+  'follicle stim hormone': 'FSH',
+  'fsh': 'FSH',
+  'luteinizing hormone': 'LH',
+  'lh': 'LH',
+  'estradiol': 'E2',
+  'dhea sulfate': 'DHEAS',
+  'dhea-s': 'DHEAS',
+  'prolactin': 'PRL',
+  'cortisol': 'CORTISOL',
+  'cortisol, random': 'CORTISOL',
+  'progesterone': 'PROG',
   
   // === THYROID ===
-  'TSH': 'TSH',
-  'Free T3': 'FT3',
-  'Free T4': 'FT4',
-  'Total T3': 'TT3',
-  'Total T4': 'TT4',
-  'Reverse T3': 'RT3',
-  'Thyroid Peroxidase Antibodies': 'TPO',
-  'Thyroglobulin Antibodies': 'TG_AB',
+  'tsh': 'TSH',
+  'free t3': 'FT3',
+  'free t4': 'FT4',
+  'total t3': 'TT3',
+  'total t4': 'TT4',
+  'reverse t3': 'RT3',
+  'thyroid peroxidase antibodies': 'TPO',
+  'thyroglobulin antibodies': 'TG_AB',
   
   // === METABOLIC / DIABETES ===
-  'Hemoglobin A1C %': 'HBA1C',
-  'HbA1c': 'HBA1C',
-  'Glucose': 'GLUCOSE',
-  'Fasting Glucose': 'GLUCOSE',
-  'Insulin': 'INSULIN',
-  'Fasting Insulin': 'INSULIN',
-  'HOMA-IR': 'HOMA_IR',
+  'hemoglobin a1c %': 'HBA1C',
+  'hemoglobin a1c': 'HBA1C',
+  'hba1c': 'HBA1C',
+  'hgba1c': 'HBA1C',
+  'glucose': 'GLUCOSE',
+  'fasting glucose': 'GLUCOSE',
+  'insulin': 'INSULIN',
+  'fasting insulin': 'INSULIN',
+  'homa-ir': 'HOMA_IR',
   
   // === VITAMINS & MINERALS ===
-  'Vitamin D 25': 'VIT_D',
-  'Vitamin D, 25 Hydroxy': 'VIT_D',
-  '25-Hydroxy Vitamin D': 'VIT_D',
-  'Vitamin B12': 'VIT_B12',
-  'B12': 'VIT_B12',
-  'Folate': 'FOLATE',
-  'Folic Acid': 'FOLATE',
-  'Ferritin': 'FERRITIN',
-  'Iron': 'IRON',
-  'Serum Iron': 'IRON',
-  'TIBC': 'TIBC',
-  'Iron Saturation': 'IRON_SAT',
-  'Magnesium': 'MAG',
-  'Zinc': 'ZINC',
-  'Copper': 'COPPER',
+  'vitamin d 25': 'VIT_D',
+  'vitamin d, 25 hydroxy': 'VIT_D',
+  '25-hydroxy vitamin d': 'VIT_D',
+  'vitamin b12': 'VIT_B12',
+  'b12': 'VIT_B12',
+  'folate': 'FOLATE',
+  'folic acid': 'FOLATE',
+  'ferritin': 'FERRITIN',
+  'iron': 'IRON',
+  'serum iron': 'IRON',
+  'tibc': 'TIBC',
+  'iron saturation': 'IRON_SAT',
+  'magnesium': 'MAG',
+  'zinc': 'ZINC',
+  'copper': 'COPPER',
   
   // === LIPIDS ===
-  'Cholesterol': 'CHOL',
-  'Total Cholesterol': 'CHOL',
-  'Triglycerides': 'TRIG',
-  'HDL': 'HDL',
-  'HDL Cholesterol': 'HDL',
-  'LDL': 'LDL',
-  'Calc LDL': 'LDL',
-  'LDL Cholesterol': 'LDL',
-  'VLDL': 'VLDL',
-  'VLDL (Calc)': 'VLDL',
-  'Apolipoprotein B': 'APOB',
-  'ApoB': 'APOB',
-  'Lipoprotein(a)': 'LPA',
-  'Lp(a)': 'LPA',
-  'Chol/HDL': 'CHOL_HDL_RATIO',
-  'Risk Ratio LDL/HDL': 'LDL_HDL_RATIO',
+  'cholesterol': 'CHOL',
+  'total cholesterol': 'CHOL',
+  'triglycerides': 'TRIG',
+  'hdl': 'HDL',
+  'hdl cholesterol': 'HDL',
+  'ldl': 'LDL',
+  'calc ldl': 'LDL',
+  'ldl cholesterol': 'LDL',
+  'vldl': 'VLDL',
+  'vldl (calc)': 'VLDL',
+  'apolipoprotein b': 'APOB',
+  'apob': 'APOB',
+  'lipoprotein(a)': 'LPA',
+  'lp(a)': 'LPA',
+  'chol/hdl': 'CHOL_HDL_RATIO',
+  'risk ratio ldl/hdl': 'LDL_HDL_RATIO',
   
   // === INFLAMMATION ===
-  'hsCRP': 'HSCRP',
-  'High-Sensitivity CRP': 'HSCRP',
-  'hs-CRP': 'HSCRP',
-  'C-Reactive Protein': 'CRP',
-  'Homocysteine': 'HCY',
-  'Fibrinogen': 'FIB',
-  'Uric Acid': 'URIC_ACID',
+  'hscrp': 'HSCRP',
+  'high-sensitivity crp': 'HSCRP',
+  'hs-crp': 'HSCRP',
+  'c-reactive protein': 'CRP',
+  'homocysteine': 'HCY',
+  'fibrinogen': 'FIB',
+  'uric acid': 'URIC_ACID',
   
   // === KIDNEY ===
-  'Creatinine': 'CREAT',
-  'Creatinine, Serum': 'CREAT',
-  'BUN': 'BUN',
-  'Blood Urea Nitrogen': 'BUN',
-  'BUN/Creat (Calc)': 'BUN_CREAT',
-  'eGFR': 'EGFR',
-  'eGFR non-African Amer.': 'EGFR',
-  'eGFR African Amer': 'EGFR_AA',
-  'Cystatin C': 'CYSC',
+  'creatinine': 'CREAT',
+  'creatinine, serum': 'CREAT',
+  'bun': 'BUN',
+  'blood urea nitrogen': 'BUN',
+  'bun/creat (calc)': 'BUN_CREAT',
+  'egfr': 'EGFR',
+  'egfr non-african amer.': 'EGFR',
+  'egfr african amer': 'EGFR_AA',
+  'cystatin c': 'CYSC',
   
   // === LIVER ===
-  'ALT': 'ALT',
-  'SGPT': 'ALT',
-  'AST': 'AST',
-  'SGOT': 'AST',
-  'AlkP': 'ALP',
-  'Alkaline Phosphatase': 'ALP',
-  'GGT': 'GGT',
-  'Gamma GT': 'GGT',
-  'Total Bilirubin': 'TBILI',
-  'Bilirubin': 'TBILI',
-  'Direct Bilirubin': 'DBILI',
-  'Albumin': 'ALB',
-  'Total Protein': 'TP',
-  'Globulin': 'GLOB',
-  'Globulin (Calc)': 'GLOB',
-  'A/G Calc': 'AG_RATIO',
+  'alt': 'ALT',
+  'sgpt': 'ALT',
+  'ast': 'AST',
+  'sgot': 'AST',
+  'alkp': 'ALP',
+  'alkaline phosphatase': 'ALP',
+  'ggt': 'GGT',
+  'gamma gt': 'GGT',
+  'total bilirubin': 'TBILI',
+  'bilirubin': 'TBILI',
+  'direct bilirubin': 'DBILI',
+  'albumin': 'ALB',
+  'total protein': 'TP',
+  'globulin': 'GLOB',
+  'globulin (calc)': 'GLOB',
+  'a/g calc': 'AG_RATIO',
   
   // === ELECTROLYTES ===
-  'Sodium': 'NA',
-  'Potassium': 'K',
-  'Chloride': 'CL',
-  'CO2': 'CO2',
-  'Carbon Dioxide': 'CO2',
-  'Calcium': 'CA',
-  'Phosphorus': 'PHOS',
-  'Anion Gap': 'ANION_GAP',
+  'sodium': 'NA',
+  'potassium': 'K',
+  'chloride': 'CL',
+  'co2': 'CO2',
+  'carbon dioxide': 'CO2',
+  'calcium': 'CA',
+  'phosphorus': 'PHOS',
+  'anion gap': 'ANION_GAP',
   
   // === HEMATOLOGY / CBC ===
-  'White Blood Cell Count': 'WBC',
-  'WBC': 'WBC',
-  'Red Blood Cell Count': 'RBC',
-  'RBC': 'RBC',
-  'Hemoglobin': 'HGB',
-  'Hematocrit': 'HCT',
-  'MCV': 'MCV',
-  'MCH': 'MCH',
-  'MCHC': 'MCHC',
-  'RDW': 'RDW',
-  'RDW-CV': 'RDW_CV',
-  'RDW-SD': 'RDW_SD',
-  'Platelet': 'PLT',
-  'Platelet Count': 'PLT',
-  'MPV': 'MPV',
+  'white blood cell count': 'WBC',
+  'wbc': 'WBC',
+  'red blood cell count': 'RBC',
+  'rbc': 'RBC',
+  'hemoglobin': 'HGB',
+  'hematocrit': 'HCT',
+  'mcv': 'MCV',
+  'mch': 'MCH',
+  'mchc': 'MCHC',
+  'rdw': 'RDW',
+  'rdw-cv': 'RDW_CV',
+  'rdw-sd': 'RDW_SD',
+  'platelet': 'PLT',
+  'platelet count': 'PLT',
+  'mpv': 'MPV',
   
   // CBC Differential
-  'Neutrophils %': 'NEUT_PCT',
-  'Lymphocytes%': 'LYMPH_PCT',
-  'Monocytes%': 'MONO_PCT',
-  'Eosinophils %': 'EOS_PCT',
-  'Basophils %': 'BASO_PCT',
-  'NEUT#': 'NEUT_ABS',
-  'LYMPH#': 'LYMPH_ABS',
-  'MONO#': 'MONO_ABS',
-  'EO#': 'EOS_ABS',
-  'BASO#': 'BASO_ABS',
-  'Immature Granulocytes%': 'IG_PCT',
-  'IG#': 'IG_ABS',
-  'NRBC %': 'NRBC_PCT',
-  'NRBC #': 'NRBC_ABS',
+  'neutrophils %': 'NEUT_PCT',
+  'lymphocytes%': 'LYMPH_PCT',
+  'monocytes%': 'MONO_PCT',
+  'eosinophils %': 'EOS_PCT',
+  'basophils %': 'BASO_PCT',
+  'neut#': 'NEUT_ABS',
+  'lymph#': 'LYMPH_ABS',
+  'mono#': 'MONO_ABS',
+  'eo#': 'EOS_ABS',
+  'baso#': 'BASO_ABS',
+  'immature granulocytes%': 'IG_PCT',
+  'ig#': 'IG_ABS',
+  'nrbc %': 'NRBC_PCT',
+  'nrbc #': 'NRBC_ABS',
   
   // === CANCER SCREENING ===
-  'Total PSA': 'PSA',
-  'PSA': 'PSA',
-  'PSA, Total, Diagnostic': 'PSA',
-  'Free PSA': 'PSA_FREE',
+  'total psa': 'PSA',
+  'psa': 'PSA',
+  'psa, total, diagnostic': 'PSA',
+  'free psa': 'PSA_FREE',
   
   // === GROWTH / AGING ===
-  'IGF-I': 'IGF1',
-  'IGF-1': 'IGF1',
-  'Insulin-Like Growth Factor': 'IGF1',
-  
-  // === OTHER ===
-  'Sed Rate': 'ESR',
-  'ESR': 'ESR',
-  'Prealbumin': 'PREALB',
+  'igf-i': 'IGF1',
+  'igf-1': 'IGF1',
+  'insulin-like growth factor': 'IGF1',
 };
 
-// Normalize marker name to our ID
-function normalizeMarker(markerName) {
-  if (!markerName) return null;
+function normalizeMarkerName(rawName) {
+  if (!rawName) return 'UNKNOWN';
   
-  // Clean the marker name
-  const cleaned = markerName.trim();
+  const cleaned = rawName.toLowerCase().trim();
   
-  // Direct lookup
+  // Direct match
   if (MARKER_MAP[cleaned]) {
     return MARKER_MAP[cleaned];
   }
   
-  // Try case-insensitive match
-  const lowerCleaned = cleaned.toLowerCase();
-  for (const [key, value] of Object.entries(MARKER_MAP)) {
-    if (key.toLowerCase() === lowerCleaned) {
-      return value;
-    }
-  }
-  
-  // Try partial match for common patterns
+  // Try partial matches
   for (const [key, value] of Object.entries(MARKER_MAP)) {
     if (cleaned.includes(key) || key.includes(cleaned)) {
       return value;
     }
   }
   
-  // Return cleaned name if no match (for manual review)
-  return `UNKNOWN_${cleaned.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 20)}`;
-}
-
-// Parse numeric value from result string
-function parseValue(valueStr) {
-  if (!valueStr) return null;
-  
-  // Handle < or > prefixes
-  const cleaned = valueStr.toString().replace(/[<>]/g, '').trim();
-  
-  // Extract numeric value
-  const match = cleaned.match(/[\d.]+/);
-  if (match) {
-    return parseFloat(match[0]);
-  }
-  return null;
-}
-
-// Parse reference range
-function parseRefRange(refStr) {
-  if (!refStr) return { low: null, high: null };
-  
-  const cleaned = refStr.toString().trim();
-  
-  // Handle ">X" format
-  if (cleaned.startsWith('>')) {
-    const val = parseFloat(cleaned.replace('>', ''));
-    return { low: val, high: null };
-  }
-  
-  // Handle "<X" format
-  if (cleaned.startsWith('<')) {
-    const val = parseFloat(cleaned.replace('<', ''));
-    return { low: null, high: val };
-  }
-  
-  // Handle "X-Y" format
-  const rangeMatch = cleaned.match(/([\d.]+)\s*[-–]\s*([\d.]+)/);
-  if (rangeMatch) {
-    return { low: parseFloat(rangeMatch[1]), high: parseFloat(rangeMatch[2]) };
-  }
-  
-  return { low: null, high: null };
+  // Return cleaned name for manual review
+  console.log('[Tribal Parser] Unmapped marker:', rawName);
+  return `UNKNOWN_${rawName.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 20)}`;
 }
 
 exports.handler = async (event) => {
-  // CORS headers
   const headers = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Content-Type': 'application/json'
   };
 
-  // Handle preflight
   if (event.httpMethod === 'OPTIONS') {
     return { statusCode: 200, headers, body: '' };
   }
 
   if (event.httpMethod !== 'POST') {
-    return {
-      statusCode: 405,
-      headers,
-      body: JSON.stringify({ error: 'Method not allowed' })
-    };
+    return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method not allowed' }) };
   }
 
   try {
-    const { pdf_base64, patient_id } = JSON.parse(event.body);
+    const body = JSON.parse(event.body);
+    const { pdfBase64, patientId, reportId } = body;
 
-    if (!pdf_base64) {
-      return {
-        statusCode: 400,
-        headers,
-        body: JSON.stringify({ error: 'No PDF data provided' })
-      };
+    if (!pdfBase64) {
+      return { statusCode: 400, headers, body: JSON.stringify({ error: 'No PDF data provided' }) };
     }
 
-    // Call Claude API to extract data
-    const anthropicResponse = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': process.env.ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 8000,
-        messages: [
-          {
-            role: 'user',
-            content: [
-              {
-                type: 'document',
-                source: {
-                  type: 'base64',
-                  media_type: 'application/pdf',
-                  data: pdf_base64
-                }
-              },
-              {
-                type: 'text',
-                text: `Extract ALL lab results from this Tribal Diagnostics PDF.
+    console.log('[Tribal Parser] Processing PDF for patient:', patientId);
 
-Return a JSON object with this EXACT structure:
+    const extractionPrompt = `Extract ALL lab results from this Tribal Diagnostics PDF report.
+
+For each marker/test result, extract:
+- marker_name: The exact marker name as shown (e.g., "Hemoglobin A1C %", "Free T3", "Testosterone")
+- value: The numeric result only (use the number from Normal or Abnormal column)
+- units: The unit of measurement
+- ref_low: Lower reference range (number only, null if none)
+- ref_high: Upper reference range (number only, null if none)
+- flag: "H" if high, "L" if low, "A" if abnormal, or null if normal
+- category: The section header (e.g., "Hormone", "Lipid", "Hematology", "Diabetes")
+- previous_value: The "Previous Result 1" value if shown, null otherwise
+
+Return ONLY valid JSON (no markdown, no code blocks):
 {
-  "report_id": "the Sample ID or Lab Accession number (e.g., C25058397)",
-  "patient_name": "patient name from header",
+  "report_id": "the Sample ID from header (e.g., C25058397)",
+  "patient_name": "patient name",
   "sample_date": "date collected",
-  "results": [
-    {
-      "marker_name": "exact marker name as shown",
-      "value": "numeric value only (no units)",
-      "units": "the unit of measurement",
-      "ref_low": "lower reference range (number only, null if none)",
-      "ref_high": "upper reference range (number only, null if none)",
-      "flag": "H, L, A, or null if normal",
-      "category": "the section header (e.g., Hormone, Lipid, Hematology)",
-      "previous_value": "previous result 1 value if shown, null otherwise",
-      "previous_date": "date of previous result if shown, null otherwise"
-    }
+  "markers": [
+    {"marker_name": "TSH", "value": 3.60, "units": "uIU/mL", "ref_low": 0.35, "ref_high": 4.94, "flag": null, "category": "Thyroid", "previous_value": 2.80},
+    {"marker_name": "Hemoglobin A1C %", "value": 5.7, "units": "%", "ref_low": 4.2, "ref_high": 5.6, "flag": "H", "category": "Diabetes", "previous_value": 5.8}
   ]
 }
 
-Important:
-- Extract EVERY marker from the Clinical Results sections
-- Include markers from Results Summary AND detailed Clinical Results
-- For values like "<0.11", extract as 0.11 and note the qualifier
-- For reference ranges like ">60", set ref_low to 60 and ref_high to null
-- Include the category/section each marker belongs to
-- Extract previous results if available (Previous Result 1 column)
-- Return ONLY the JSON object, no other text`
+CRITICAL:
+- Extract ALL markers from ALL pages
+- Include BOTH normal AND abnormal results
+- For values like "<0.11", use 0.11 as the value
+- For reference ranges like ">60", set ref_low to 60, ref_high to null
+- Do NOT skip any markers`;
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 8000,
+        messages: [{
+          role: 'user',
+          content: [
+            {
+              type: 'document',
+              source: {
+                type: 'base64',
+                media_type: 'application/pdf',
+                data: pdfBase64
               }
-            ]
-          }
-        ]
+            },
+            {
+              type: 'text',
+              text: extractionPrompt
+            }
+          ]
+        }]
       })
     });
 
-    if (!anthropicResponse.ok) {
-      const errorText = await anthropicResponse.text();
-      console.error('Anthropic API error:', errorText);
-      return {
-        statusCode: 500,
-        headers,
-        body: JSON.stringify({ error: 'Claude API failed', details: errorText })
-      };
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[Tribal Parser] Claude API error:', response.status, errorText);
+      return { statusCode: 500, headers, body: JSON.stringify({ error: 'Claude API failed', details: errorText }) };
     }
 
-    const claudeData = await anthropicResponse.json();
-    const responseText = claudeData.content[0].text;
-
-    // Parse Claude's JSON response
-    let parsedData;
+    const data = await response.json();
+    let extractedText = data.content[0].text;
+    
+    // Clean up response
+    extractedText = extractedText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+    
+    let parsed;
     try {
-      // Try to extract JSON from response (handle markdown code blocks)
-      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        parsedData = JSON.parse(jsonMatch[0]);
-      } else {
-        throw new Error('No JSON found in response');
-      }
+      parsed = JSON.parse(extractedText);
     } catch (parseError) {
-      console.error('Failed to parse Claude response:', responseText);
+      console.error('[Tribal Parser] JSON parse error:', parseError);
+      return { statusCode: 500, headers, body: JSON.stringify({ error: 'Failed to parse Claude response', raw: extractedText.substring(0, 500) }) };
+    }
+
+    const finalReportId = reportId || parsed.report_id || `RPT-${Date.now()}`;
+    
+    console.log('[Tribal Parser] Report ID:', finalReportId);
+    console.log('[Tribal Parser] Extracted', parsed.markers?.length || 0, 'markers');
+
+    // Format results
+    const results = (parsed.markers || []).map((marker, index) => {
+      const markerId = normalizeMarkerName(marker.marker_name);
       return {
-        statusCode: 500,
-        headers,
-        body: JSON.stringify({ 
-          error: 'Failed to parse Claude response', 
-          raw: responseText.substring(0, 500) 
-        })
-      };
-    }
-
-    // Process and normalize results
-    const processedResults = [];
-    let index = 1;
-
-    for (const result of parsedData.results || []) {
-      const markerId = normalizeMarker(result.marker_name);
-      const value = parseValue(result.value);
-      
-      // Skip if no valid value
-      if (value === null) continue;
-
-      const refRange = parseRefRange(`${result.ref_low || ''}-${result.ref_high || ''}`);
-
-      processedResults.push({
-        result_id: `${parsedData.report_id}-${String(index).padStart(3, '0')}`,
-        report_id: parsedData.report_id,
-        patient_id: patient_id || '',
+        result_id: `${finalReportId}-${String(index + 1).padStart(3, '0')}`,
+        report_id: finalReportId,
+        patient_id: patientId || '',
         marker_id_inbox: markerId,
-        marker_name_original: result.marker_name,
-        value: value,
-        units: result.units || '',
-        ref_low: result.ref_low || refRange.low,
-        ref_high: result.ref_high || refRange.high,
-        flag: result.flag || '',
-        category: result.category || '',
-        previous_value: parseValue(result.previous_value),
-        previous_date: result.previous_date || ''
-      });
-
-      index++;
-    }
+        marker_name_original: marker.marker_name,
+        value: parseFloat(marker.value) || 0,
+        units: marker.units || '',
+        ref_low: marker.ref_low,
+        ref_high: marker.ref_high,
+        flag: marker.flag || '',
+        category: marker.category || '',
+        previous_value: marker.previous_value,
+        previous_date: marker.previous_date || ''
+      };
+    });
 
     return {
       statusCode: 200,
       headers,
       body: JSON.stringify({
         success: true,
-        report_id: parsedData.report_id,
-        patient_name: parsedData.patient_name,
-        sample_date: parsedData.sample_date,
-        results: processedResults,
-        total_markers: processedResults.length
+        report_id: finalReportId,
+        patient_name: parsed.patient_name || '',
+        sample_date: parsed.sample_date || '',
+        patient_id: patientId || '',
+        count: results.length,
+        results: results
       })
     };
 
   } catch (error) {
-    console.error('Parser error:', error);
+    console.error('[Tribal Parser] Error:', error);
     return {
       statusCode: 500,
       headers,
-      body: JSON.stringify({ error: 'Parser failed', message: error.message })
+      body: JSON.stringify({ error: 'Server error', details: error.message })
     };
   }
 };
