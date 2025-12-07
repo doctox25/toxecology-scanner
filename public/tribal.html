@@ -481,7 +481,10 @@
                 <div class="subtitle">Match the extracted results to a patient in the system</div>
                 
                 <div class="pdf-patient-info" id="pdfPatientInfo">
-                    Patient from PDF: <strong id="pdfPatientName">—</strong>
+                    <div>Patient from PDF: <strong id="pdfPatientName">—</strong></div>
+                    <div style="margin-top: 4px; font-size: 13px; color: #666;">
+                        DOB: <span id="pdfPatientDob">—</span> | Sex: <span id="pdfPatientSex">—</span>
+                    </div>
                 </div>
                 
                 <div class="search-input-wrapper">
@@ -541,6 +544,8 @@
         let extractedResults = [];
         let reportId = '';
         let pdfPatientName = '';
+        let pdfPatientDob = '';
+        let pdfPatientSex = '';
         let selectedPatientId = '';
         let selectedPatientSex = '';
         let searchTimeout = null;
@@ -554,6 +559,8 @@
         const status = document.getElementById('status');
         const patientSearchSection = document.getElementById('patientSearchSection');
         const pdfPatientNameEl = document.getElementById('pdfPatientName');
+        const pdfPatientDobEl = document.getElementById('pdfPatientDob');
+        const pdfPatientSexEl = document.getElementById('pdfPatientSex');
         const patientSearch = document.getElementById('patientSearch');
         const searchResults = document.getElementById('searchResults');
         const selectedPatient = document.getElementById('selectedPatient');
@@ -609,6 +616,9 @@
             resultsSection.classList.remove('visible');
             extractedResults = [];
             reportId = '';
+            pdfPatientName = '';
+            pdfPatientDob = '';
+            pdfPatientSex = '';
             selectedPatientId = '';
             selectedPatientSex = '';
             patientSearch.value = '';
@@ -646,12 +656,16 @@
                 extractedResults = data.results;
                 reportId = data.report_id;
                 pdfPatientName = data.patient_name || 'Not found in PDF';
+                pdfPatientDob = data.patient_dob || '—';
+                pdfPatientSex = data.patient_sex || '—';
                 
                 status.className = 'status success';
                 status.innerHTML = `✓ Extracted ${data.count} markers from report ${reportId}`;
                 
                 // Show patient search
                 pdfPatientNameEl.textContent = pdfPatientName;
+                pdfPatientDobEl.textContent = pdfPatientDob;
+                pdfPatientSexEl.textContent = pdfPatientSex;
                 patientSearchSection.classList.add('visible');
                 
                 // Pre-populate search with PDF patient name
