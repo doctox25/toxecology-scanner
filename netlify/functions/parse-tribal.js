@@ -219,7 +219,14 @@ exports.handler = async (event) => {
 
     const extractionPrompt = `Extract ALL lab results from this Tribal Diagnostics PDF report.
 
-For each marker/test result, extract:
+FIRST, extract patient information from the header:
+- patient_name: Full name as shown (e.g., "John Smith")
+- patient_dob: Date of birth (format as MM/DD/YYYY if possible)
+- patient_sex: Gender/Sex if shown (e.g., "Male", "Female")
+- report_id: Sample ID from header (e.g., "C25058397")
+- sample_date: Date collected
+
+THEN, for each marker/test result, extract:
 - marker_name: The exact marker name as shown (e.g., "Hemoglobin A1C %", "Free T3", "Testosterone")
 - value: The numeric result only (use the number from Normal or Abnormal column)
 - units: The unit of measurement
@@ -231,9 +238,11 @@ For each marker/test result, extract:
 
 Return ONLY valid JSON (no markdown, no code blocks):
 {
-  "report_id": "the Sample ID from header (e.g., C25058397)",
-  "patient_name": "patient name",
-  "sample_date": "date collected",
+  "report_id": "C25058397",
+  "patient_name": "John Smith",
+  "patient_dob": "05/15/1980",
+  "patient_sex": "Male",
+  "sample_date": "11/20/2025",
   "markers": [
     {"marker_name": "TSH", "value": 3.60, "units": "uIU/mL", "ref_low": 0.35, "ref_high": 4.94, "flag": null, "category": "Thyroid", "previous_value": 2.80},
     {"marker_name": "Hemoglobin A1C %", "value": 5.7, "units": "%", "ref_low": 4.2, "ref_high": 5.6, "flag": "H", "category": "Diabetes", "previous_value": 5.8}
@@ -241,6 +250,7 @@ Return ONLY valid JSON (no markdown, no code blocks):
 }
 
 CRITICAL:
+- Extract patient name, DOB, and sex from the PDF header FIRST
 - Extract ALL markers from ALL pages
 - Include BOTH normal AND abnormal results
 - For values like "<0.11", use 0.11 as the value
@@ -329,6 +339,8 @@ CRITICAL:
         success: true,
         report_id: finalReportId,
         patient_name: parsed.patient_name || '',
+        patient_dob: parsed.patient_dob || '',
+        patient_sex: parsed.patient_sex || '',
         sample_date: parsed.sample_date || '',
         patient_id: patientId || '',
         count: results.length,
