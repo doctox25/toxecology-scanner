@@ -182,8 +182,81 @@ const MARKER_MAP = {
   'n-acetyl-s-(2-hydroxypropyl)-cysteine': 'NAHP',
   'nahp': 'NAHP',
 
-  // ===== DOM_METABOLIC (1 marker) =====
+  // ===== DOM_METABOLIC_TOXIN (1 marker) =====
   'tiglylglycine': 'TG',
+
+  // ===== DOM_OXIDATIVE (16 markers) - Oxidative Stress Biomarkers =====
+  // Lipid Peroxidation
+  '8-iso-prostaglandin f2α': 'ISO_PGF2A',
+  '8-iso-prostaglandin f2a': 'ISO_PGF2A',
+  '8-isoprostane': 'ISO_PGF2A',
+  'isoprostane': 'ISO_PGF2A',
+  'iso_pgf2a': 'ISO_PGF2A',
+  '11β-prostaglandin f2α': 'PGF2A_11B',
+  '11b-prostaglandin f2a': 'PGF2A_11B',
+  '11-beta-prostaglandin': 'PGF2A_11B',
+  'pgf2a_11b': 'PGF2A_11B',
+  '15(r)-prostaglandin f2α': 'PGF2A_15R',
+  '15(r)-prostaglandin f2a': 'PGF2A_15R',
+  '15r-prostaglandin': 'PGF2A_15R',
+  'pgf2a_15r': 'PGF2A_15R',
+  'glutathione-s-4-hydroxynonenal': 'GS_HNE',
+  'gs-hne': 'GS_HNE',
+  '4-hydroxynonenal': 'GS_HNE',
+  'hydroxynonenal': 'GS_HNE',
+  'gs_hne': 'GS_HNE',
+  'malondialdehyde': 'MDA',
+  'mda': 'MDA',
+  
+  // DNA/RNA Damage
+  '8-hydroxy-2-deoxyguanosine': '8OHDG',
+  '8-ohdg': '8OHDG',
+  '8ohdg': '8OHDG',
+  '8-hydroxyguanosine': '8OHG',
+  '8-ohg': '8OHG',
+  '8ohg': '8OHG',
+  '8-hydroxyguanine sulfate': '8OHGS',
+  '8-ohgs': '8OHGS',
+  '8ohgs': '8OHGS',
+  '8-nitroguanine': '8NITROG',
+  '8-nitroguanine sulfate': '8NITROGS',
+  '8nitrog': '8NITROG',
+  '8nitrogs': '8NITROGS',
+  
+  // Protein Oxidation
+  '3-bromotyrosine': '3BTYR',
+  'bromotyrosine': '3BTYR',
+  '3btyr': '3BTYR',
+  '3-chlorotyrosine': '3CLTYR',
+  'chlorotyrosine': '3CLTYR',
+  '3cltyr': '3CLTYR',
+  'dityrosine': 'DITYR',
+  'di-tyrosine': 'DITYR',
+  'dityr': 'DITYR',
+  'nitrotyrosine': 'NITYR',
+  '3-nitrotyrosine': 'NITYR',
+  'nityr': 'NITYR',
+  
+  // Advanced Glycation End Products
+  'nε-carboxymethyl-lysine': 'CML',
+  'carboxymethyl-lysine': 'CML',
+  'carboxymethyllysine': 'CML',
+  'cml': 'CML',
+  'nε-carboxyethyl-lysine': 'CEL',
+  'carboxyethyl-lysine': 'CEL',
+  'carboxyethyllysine': 'CEL',
+  'cel': 'CEL',
+
+  // ===== METHYLATION SERUM (map to EXISTING markers) =====
+  'homocysteine': 'HCY',
+  'hcy': 'HCY',
+  'vitamin b12': 'VIT_B12',
+  'vitamin b12 serum': 'VIT_B12',
+  'b12': 'VIT_B12',
+  'vit_b12': 'VIT_B12',
+  'folate': 'FOLATE',
+  'folate serum': 'FOLATE',
+  'folic acid': 'FOLATE',
   
   // ===== FALLBACK CATCHES for Claude's abbreviated extractions =====
   '2_carbamoylethyl': 'NASC',
@@ -208,6 +281,45 @@ const MARKER_MAP = {
   '3,4-dihydroxybutyl': 'NADC',
   'dihydroxybutyl': 'NADC',
   'propyl': 'NAPR'
+};
+
+// Genetics field mapping for patient_genetics table
+const METHYLATION_GENES = [
+  'MTHFR_677', 'MTHFR_1298', 'MTRR_A66G', 'MTRR_K350A', 
+  'MAT1A', 'SHMT1', 'GNMT', 'BHMT', 'MTR', 
+  'COMT_V158M', 'COMT_H62H', 'NOS3'
+];
+
+const OXIDATIVE_GENES = [
+  'SOD1', 'SOD2_1', 'SOD2_2', 'SOD3',
+  'CAT1', 'CAT2', 'CAT3',
+  'GPX1', 'GPX2', 'GPX3', 'GPX4',
+  'GSS', 'HMOX1', 'GSTM1', 'GSTM5', 'GSTP1',
+  'TRXR2', 'CYBA1', 'CYBA2', 'PRKAA2',
+  'XDH1', 'XDH2', 'TXNRD1', 'TXNRD2',
+  'CYP1A1', 'COX2', 'SELENOP', 'GSR', 'CYB5R3', 'GLUL'
+];
+
+// Gene weights for scoring
+const METHYLATION_GENE_WEIGHTS = {
+  'MTHFR_677': 1.5, 'MTHFR_1298': 1.5,
+  'COMT_V158M': 1.0, 'COMT_H62H': 1.0,
+  'MTRR_A66G': 1.0, 'MTRR_K350A': 1.0,
+  'MTR': 1.5, 'MAT1A': 1.5, 'SHMT1': 1.5,
+  'BHMT': 1.0, 'GNMT': 1.0, 'NOS3': 1.0
+};
+
+const OXIDATIVE_GENE_WEIGHTS = {
+  'GPX1': 0.625, 'GPX2': 0.625, 'GPX3': 0.625, 'GPX4': 0.625,
+  'GSTM1': 0.833, 'GSTM5': 0.833, 'GSTP1': 0.833,
+  'SOD1': 0.5, 'SOD2_1': 0.5, 'SOD2_2': 0.5, 'SOD3': 0.5,
+  'CYBA1': 1.0, 'CYBA2': 1.0,
+  'TRXR2': 0.5, 'TXNRD1': 0.5, 'TXNRD2': 0.5,
+  'XDH1': 0.75, 'XDH2': 0.75,
+  'CAT1': 0.5, 'CAT2': 0.5, 'CAT3': 0.5,
+  'GSS': 1.0, 'HMOX1': 1.0, 'PRKAA2': 1.0,
+  'CYP1A1': 1.0, 'COX2': 1.0, 'SELENOP': 1.0,
+  'GSR': 1.0, 'CYB5R3': 1.0, 'GLUL': 1.0
 };
 
 function normalizeMarkerName(rawName) {
@@ -245,6 +357,44 @@ function normalizeMarkerName(rawName) {
   }
   
   // ===== PATTERN MATCHING FOR PARTIAL/ABBREVIATED NAMES =====
+  
+  // Oxidative stress markers
+  if (cleaned.includes('isoprostane') || cleaned.includes('8-iso')) {
+    return 'ISO_PGF2A';
+  }
+  if (cleaned.includes('11β') || cleaned.includes('11b') || cleaned.includes('11-beta')) {
+    return 'PGF2A_11B';
+  }
+  if (cleaned.includes('15(r)') || cleaned.includes('15r')) {
+    return 'PGF2A_15R';
+  }
+  if (cleaned.includes('hydroxynonenal') || cleaned.includes('gs-hne') || cleaned.includes('4-hne')) {
+    return 'GS_HNE';
+  }
+  if (cleaned.includes('malondialdehyde') || cleaned === 'mda') {
+    return 'MDA';
+  }
+  if (cleaned.includes('8-hydroxy-2-deoxy') || cleaned.includes('8-ohdg') || cleaned === '8ohdg') {
+    return '8OHDG';
+  }
+  if (cleaned.includes('bromotyrosine')) {
+    return '3BTYR';
+  }
+  if (cleaned.includes('chlorotyrosine')) {
+    return '3CLTYR';
+  }
+  if (cleaned.includes('dityrosine')) {
+    return 'DITYR';
+  }
+  if (cleaned.includes('nitrotyrosine')) {
+    return 'NITYR';
+  }
+  if (cleaned.includes('carboxymethyl') && cleaned.includes('lysine')) {
+    return 'CML';
+  }
+  if (cleaned.includes('carboxyethyl') && cleaned.includes('lysine')) {
+    return 'CEL';
+  }
   
   // VOC N-Acetyl compounds (most problematic)
   if (cleaned.includes('carbamoylethyl') || cleaned.includes('carbamoyl') || cleaned.includes('2-carbamoyl')) {
@@ -319,6 +469,107 @@ function normalizeMarkerName(rawName) {
   return words.map(w => w[0]).join('').toUpperCase().substring(0, 8) || 'UNK';
 }
 
+// Calculate genetic risk scores
+function calculateGeneticScores(genetics) {
+  const riskPoints = {
+    'Normal': 0,
+    'Heterozygous': 1,
+    'Homozygous_Mutant': 2,
+    'Partially_Elevated': 1,
+    'Elevated': 2
+  };
+
+  // Methylation score
+  let methylationWeightedScore = 0;
+  let methylationMaxScore = 0;
+  
+  if (genetics.methylation && genetics.methylation.length > 0) {
+    for (const snp of genetics.methylation) {
+      const weight = METHYLATION_GENE_WEIGHTS[snp.gene] || 1.0;
+      const points = riskPoints[snp.risk] || 0;
+      methylationWeightedScore += points * weight;
+      methylationMaxScore += 2 * weight; // max is 2 points per gene
+    }
+  }
+  
+  const methylationRiskScore = methylationMaxScore > 0 
+    ? Math.round((methylationWeightedScore / methylationMaxScore) * 100) 
+    : null;
+
+  // Oxidative score
+  let oxidativeWeightedScore = 0;
+  let oxidativeMaxScore = 0;
+  
+  if (genetics.oxidative && genetics.oxidative.length > 0) {
+    for (const snp of genetics.oxidative) {
+      const weight = OXIDATIVE_GENE_WEIGHTS[snp.gene] || 1.0;
+      const points = riskPoints[snp.risk] || 0;
+      oxidativeWeightedScore += points * weight;
+      oxidativeMaxScore += 2 * weight;
+    }
+  }
+  
+  const oxidativeRiskScore = oxidativeMaxScore > 0 
+    ? Math.round((oxidativeWeightedScore / oxidativeMaxScore) * 100) 
+    : null;
+
+  // Combined score (average of both if both present)
+  let combinedScore = null;
+  if (methylationRiskScore !== null && oxidativeRiskScore !== null) {
+    combinedScore = Math.round((methylationRiskScore + oxidativeRiskScore) / 2);
+  } else if (methylationRiskScore !== null) {
+    combinedScore = methylationRiskScore;
+  } else if (oxidativeRiskScore !== null) {
+    combinedScore = oxidativeRiskScore;
+  }
+
+  // Detox capacity multiplier: 1.0 (no risk) to 1.3 (high risk)
+  const detoxCapacityMultiplier = combinedScore !== null 
+    ? Math.round((1 + (combinedScore / 100) * 0.3) * 100) / 100
+    : 1.0;
+
+  return {
+    methylation_risk_score: methylationRiskScore,
+    oxidative_risk_score: oxidativeRiskScore,
+    combined_genetic_score: combinedScore,
+    detox_capacity_multiplier: detoxCapacityMultiplier
+  };
+}
+
+// Format genetics for patient_genetics table
+function formatGeneticsForAirtable(genetics, reportId, patientId, panelType) {
+  const record = {
+    genetics_id: `GEN-${reportId}`,
+    patient_id: patientId,
+    report_id: reportId,
+    panel_type: panelType
+  };
+
+  // Add methylation SNPs
+  if (genetics.methylation) {
+    for (const snp of genetics.methylation) {
+      if (METHYLATION_GENES.includes(snp.gene)) {
+        record[snp.gene] = snp.risk; // Normal, Heterozygous, or Homozygous_Mutant
+      }
+    }
+  }
+
+  // Add oxidative SNPs
+  if (genetics.oxidative) {
+    for (const snp of genetics.oxidative) {
+      if (OXIDATIVE_GENES.includes(snp.gene)) {
+        record[snp.gene] = snp.risk; // Normal, Partially_Elevated, or Elevated
+      }
+    }
+  }
+
+  // Add calculated scores
+  const scores = calculateGeneticScores(genetics);
+  Object.assign(record, scores);
+
+  return record;
+}
+
 exports.handler = async (event) => {
   const headers = {
     'Access-Control-Allow-Origin': '*',
@@ -344,30 +595,75 @@ exports.handler = async (event) => {
 
     console.log('[Vibrant Parser] Processing PDF for patient:', patientId, 'report:', reportId);
 
+    // Enhanced extraction prompt that handles all panel types
     const extractionPrompt = `Extract ALL test results from this Vibrant Wellness lab report PDF.
 
-For each marker/test result, extract:
-- marker_name: The COMPLETE name of the marker as shown (e.g., "N-Acetyl-S-(2-carbamoylethyl)-L-cysteine" or "Diethyldithiophosphate (DEDTP)")
-- value: The numeric result only (if "<LOD" or "ND" or "Not Detected", use 0)
+STEP 1: Identify which panels are present:
+- Total Tox Panel (Heavy Metals, Mycotoxins, Environmental Toxins)
+- PFAS Panel
+- Methylation Panel (includes genetics AND serum markers)
+- Oxidative Stress Panel (includes genetics AND biomarkers)
+
+STEP 2: For each BIOMARKER/TEST RESULT, extract:
+- marker_name: The COMPLETE name as shown
+- value: Numeric result only (if "<LOD" or "ND" or "Not Detected", use 0)
+
+STEP 3: For GENETICS (SNPs from Methylation and/or Oxidative panels), extract:
+- gene: Gene name (e.g., "MTHFR C677T", "GPX4", "GSTM1")
+- rsid: rs number if shown (e.g., "rs1801133")
+- genotype: The allele result (e.g., "C/C", "C/T", "T/T")
+- risk: Risk level as shown - use exactly: "Normal", "Heterozygous", "Homozygous_Mutant" for methylation; "Normal", "Partially_Elevated", "Elevated" for oxidative
 
 Return ONLY valid JSON (no markdown, no code blocks):
 {
+  "panels_detected": ["Total_Tox", "PFAS", "Methylation", "Oxidative_Stress"],
   "markers": [
     {"marker_name": "Arsenic", "value": 12.5},
-    {"marker_name": "Diethyldithiophosphate (DEDTP)", "value": 1.0},
-    {"marker_name": "N-Acetyl-S-(2-carbamoylethyl)-L-cysteine", "value": 80.5},
-    {"marker_name": "N-Acetyl (3,4-Dihydroxybutyl) Cysteine", "value": 119.7},
-    {"marker_name": "Zearalenone (ZEN)", "value": 0.19}
-  ]
+    {"marker_name": "Homocysteine", "value": 11.0},
+    {"marker_name": "8-Hydroxy-2-deoxyguanosine", "value": 2.8},
+    {"marker_name": "Malondialdehyde", "value": 0.15}
+  ],
+  "genetics": {
+    "methylation": [
+      {"gene": "MTHFR_677", "rsid": "rs1801133", "genotype": "C/C", "risk": "Normal"},
+      {"gene": "MTHFR_1298", "rsid": "rs1801131", "genotype": "C/C", "risk": "Homozygous_Mutant"},
+      {"gene": "MTRR_A66G", "rsid": "rs1801394", "genotype": "G/G", "risk": "Homozygous_Mutant"},
+      {"gene": "MTRR_K350A", "rsid": "rs162036", "genotype": "A/A", "risk": "Normal"},
+      {"gene": "MAT1A", "rsid": "rs4933327", "genotype": "T/T", "risk": "Homozygous_Mutant"},
+      {"gene": "SHMT1", "rsid": "rs1979277", "genotype": "A/A", "risk": "Homozygous_Mutant"},
+      {"gene": "GNMT", "rsid": "rs10948059", "genotype": "C/C", "risk": "Normal"},
+      {"gene": "BHMT", "rsid": "rs3733890", "genotype": "G/G", "risk": "Normal"},
+      {"gene": "MTR", "rsid": "rs1805087", "genotype": "A/A", "risk": "Normal"},
+      {"gene": "COMT_V158M", "rsid": "rs4680", "genotype": "G/G", "risk": "Normal"},
+      {"gene": "COMT_H62H", "rsid": "rs4633", "genotype": "C/C", "risk": "Normal"},
+      {"gene": "NOS3", "rsid": "rs1799983", "genotype": "G/G", "risk": "Normal"}
+    ],
+    "oxidative": [
+      {"gene": "GPX4", "rsid": "rs713041", "genotype": "T/T", "risk": "Elevated"},
+      {"gene": "GSTM1", "rsid": "Deletion", "genotype": "Null/Null", "risk": "Elevated"},
+      {"gene": "SOD2_1", "rsid": "rs4880", "genotype": "C/C", "risk": "Normal"}
+    ]
+  }
 }
 
 CRITICAL INSTRUCTIONS:
-- Extract ALL markers from ALL pages of the report
+- Extract ALL markers from ALL pages
 - Include both normal AND elevated results
-- Use the COMPLETE marker name exactly as shown in the PDF
-- Include any abbreviations in parentheses if shown (e.g., "Nickel" or "Zearalenone (ZEN)")
+- For genetics, map gene names to standardized format:
+  * MTHFR C677T → MTHFR_677
+  * MTHFR A1298C → MTHFR_1298
+  * MTRR A66G → MTRR_A66G
+  * MTRR K350A → MTRR_K350A
+  * SOD2 rs4880 → SOD2_1
+  * SOD2 rs2758331 → SOD2_2
+  * CYBA rs4673 → CYBA1
+  * CYBA rs1049255 → CYBA2
+  * XDH rs206860 → XDH1
+  * XDH rs17011368 → XDH2
+- Use EXACT risk level strings as shown above
+- If no genetics panels present, return empty genetics object: {"methylation": [], "oxidative": []}
 - Value must be a number only (no units, no text)
-- Do NOT skip any markers`;
+- Do NOT skip any markers or SNPs`;
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -377,8 +673,8 @@ CRITICAL INSTRUCTIONS:
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 8000,
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 16000,
         messages: [{
           role: 'user',
           content: [
@@ -423,15 +719,18 @@ CRITICAL INSTRUCTIONS:
     const finalReportId = reportId || `RPT-${Date.now()}`;
     
     console.log('[Vibrant Parser] Report ID:', finalReportId);
+    console.log('[Vibrant Parser] Panels detected:', parsed.panels_detected || []);
     console.log('[Vibrant Parser] Extracted', parsed.markers?.length || 0, 'markers');
+    console.log('[Vibrant Parser] Methylation SNPs:', parsed.genetics?.methylation?.length || 0);
+    console.log('[Vibrant Parser] Oxidative SNPs:', parsed.genetics?.oxidative?.length || 0);
 
-    // Format for Airtable - only the 5 fields needed
     // Filter out non-toxin validation markers
     const SKIP_MARKERS = new Set([
       'urine creatinine', 'urinary creatinine', 'creatinine', 'uc',
       'specific gravity', 'sg', 'ph', 'urine ph'
     ]);
     
+    // Format markers for Airtable results table
     const airtableRecords = (parsed.markers || [])
       .filter(marker => {
         const name = marker.marker_name.toLowerCase().trim();
@@ -448,6 +747,29 @@ CRITICAL INSTRUCTIONS:
         };
       });
 
+    // Determine panel type for genetics
+    const hasMethodylation = parsed.genetics?.methylation?.length > 0;
+    const hasOxidative = parsed.genetics?.oxidative?.length > 0;
+    let panelType = 'None';
+    if (hasMethodylation && hasOxidative) {
+      panelType = 'Both';
+    } else if (hasMethodylation) {
+      panelType = 'Methylation';
+    } else if (hasOxidative) {
+      panelType = 'Oxidative_Stress';
+    }
+
+    // Format genetics for patient_genetics table
+    let geneticsRecord = null;
+    if (panelType !== 'None') {
+      geneticsRecord = formatGeneticsForAirtable(
+        parsed.genetics,
+        finalReportId,
+        patientId || '',
+        panelType
+      );
+    }
+
     return {
       statusCode: 200,
       headers,
@@ -455,8 +777,22 @@ CRITICAL INSTRUCTIONS:
         success: true,
         report_id: finalReportId,
         patient_id: patientId || '',
-        count: airtableRecords.length,
-        results: airtableRecords
+        panels_detected: parsed.panels_detected || [],
+        
+        // Results for results table (existing flow)
+        marker_count: airtableRecords.length,
+        results: airtableRecords,
+        
+        // Genetics for patient_genetics table (new)
+        has_genetics: panelType !== 'None',
+        panel_type: panelType,
+        genetics: geneticsRecord,
+        
+        // Raw genetics for debugging/display
+        genetics_raw: {
+          methylation_snps: parsed.genetics?.methylation || [],
+          oxidative_snps: parsed.genetics?.oxidative || []
+        }
       })
     };
 
