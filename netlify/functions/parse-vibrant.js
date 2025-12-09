@@ -289,8 +289,12 @@ Use 0 for "<LOD". Return ONLY JSON.`;
     const parsed1 = tryParseJSON(response1.content[0].text);
     const parsed2 = tryParseJSON(response2.content[0].text);
     
+    console.log('[Vibrant Parser] Pass 1 raw keys:', parsed1 ? Object.keys(parsed1) : 'null');
+    console.log('[Vibrant Parser] Pass 2 raw keys:', parsed2 ? Object.keys(parsed2) : 'null');
+    
     if (!parsed1) {
       console.error('[Vibrant Parser] Pass 1 parse failed');
+      console.log('[Vibrant Parser] Pass 1 raw:', response1.content[0].text.substring(0, 500));
       return {
         statusCode: 500,
         headers: { 'Access-Control-Allow-Origin': '*' },
@@ -300,13 +304,13 @@ Use 0 for "<LOD". Return ONLY JSON.`;
 
     const reportId = parsed1.report_id || 'UNKNOWN';
     const panelType = parsed1.panel_type || 'VIB';
-    let allMarkers = parsed1.markers || [];
-    let allGenetics = parsed1.genetics || [];
+    let allMarkers = Array.isArray(parsed1.markers) ? parsed1.markers : [];
+    let allGenetics = Array.isArray(parsed1.genetics) ? parsed1.genetics : [];
 
     console.log(`[Vibrant Parser] Pass 1 - Report ID: ${reportId}, Panel: ${panelType}, Markers: ${allMarkers.length}`);
 
     // Add pass 2 markers
-    if (parsed2 && parsed2.markers) {
+    if (parsed2 && Array.isArray(parsed2.markers)) {
       console.log(`[Vibrant Parser] Pass 2 - Got ${parsed2.markers.length} additional markers`);
       allMarkers = [...allMarkers, ...parsed2.markers];
     }
