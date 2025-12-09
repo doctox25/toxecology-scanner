@@ -330,6 +330,31 @@ Use 0 for "<LOD". Return ONLY JSON.`;
       
       return markers;
     }
+    
+    // Helper to normalize marker objects - handles {"Glyphosate": 0.17} format
+    function normalizeMarkerObject(marker) {
+      // If it already has marker_name or name, return as-is
+      if (marker.marker_name || marker.name || marker.compound || marker.analyte) {
+        return marker;
+      }
+      
+      // Otherwise, assume it's a key-value pair like {"Glyphosate": 0.17}
+      const keys = Object.keys(marker);
+      if (keys.length > 0) {
+        // Find the first key that looks like a marker name (not a metadata field)
+        const skipKeys = ['units', 'reference', 'range', 'status', 'flag'];
+        for (const key of keys) {
+          if (!skipKeys.includes(key.toLowerCase())) {
+            return {
+              marker_name: key,
+              value: marker[key]
+            };
+          }
+        }
+      }
+      
+      return marker;
+    }
 
     const reportId = parsed1.report_id || 'UNKNOWN';
     const panelType = parsed1.panel_type || 'VIB';
@@ -347,9 +372,12 @@ Use 0 for "<LOD". Return ONLY JSON.`;
 
     console.log(`[Vibrant Parser] Total markers: ${allMarkers.length}`);
     
+    // Normalize all markers to standard format
+    allMarkers = allMarkers.map(normalizeMarkerObject);
+    
     // Debug: log first 3 marker structures
     if (allMarkers.length > 0) {
-      console.log('[Vibrant Parser] Sample marker structures:');
+      console.log('[Vibrant Parser] Sample marker structures (after normalization):');
       for (let i = 0; i < Math.min(3, allMarkers.length); i++) {
         console.log(`  Marker ${i}: ${JSON.stringify(allMarkers[i]).substring(0, 200)}`);
       }
