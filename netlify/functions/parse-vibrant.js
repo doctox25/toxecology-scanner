@@ -481,6 +481,9 @@ List EACH marker as a separate object. Return ONLY valid JSON, no markdown.`;
     let idx = 1;
 
     // Process biomarkers (deduplicate)
+    let duplicateCount = 0;
+    let unmappedCount = 0;
+    
     for (const marker of allMarkers) {
       // Handle different property names for marker name
       const rawName = marker.marker_name || marker.name || marker.compound || marker.analyte || marker.test || '';
@@ -493,8 +496,17 @@ List EACH marker as a separate object. Return ONLY valid JSON, no markdown.`;
       const markerId = normalizeMarkerName(rawName);
       
       // Skip duplicates
-      if (seenMarkers.has(markerId)) continue;
+      if (seenMarkers.has(markerId)) {
+        duplicateCount++;
+        continue;
+      }
       seenMarkers.add(markerId);
+      
+      // Log unmapped markers (first 10 only)
+      if (markerId === rawName.toUpperCase().replace(/[^A-Z0-9]/g, '_').substring(0, 20) && unmappedCount < 10) {
+        console.log(`[Vibrant Parser] Unmapped marker: ${rawName} (${markerId})`);
+        unmappedCount++;
+      }
       
       // Handle different property names for value
       const rawValue = marker.value ?? marker.result ?? marker.level ?? marker.concentration ?? 0;
@@ -511,6 +523,9 @@ List EACH marker as a separate object. Return ONLY valid JSON, no markdown.`;
       });
       idx++;
     }
+    
+    console.log(`[Vibrant Parser] Deduplication: ${duplicateCount} duplicates removed from ${allMarkers.length} total`);
+    console.log(`[Vibrant Parser] Unique biomarkers extracted: ${Array.from(seenMarkers).slice(0, 30).join(', ')}...`);
 
     // Process genetics
     let snpIdx = 1;
