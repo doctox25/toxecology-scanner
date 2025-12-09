@@ -56,7 +56,8 @@ const MARKER_MAP = {
   // HERBICIDES/PESTICIDES
   '2,4-dichlorophenoxyacetic acid': '2_4_D', '2,4-d': '2_4_D',
   'atrazine': 'ATRA', 'atrazine mercapturate': 'ATRA_M', 'glyphosate': 'GLYP',
-  '2,2-bis(4-chlorophenyl) acetic acid': 'DDA', '2,2-bis(4-chlorophenyl)acetic acid': 'DDA', 'dda': 'DDA', 'p,p-dda': 'DDA',
+  '2,2-bis(4-chlorophenyl) acetic acid': 'DDA', '2,2-bis(4-chlorophenyl)acetic acid': 'DDA', 
+  '2,2-bis (4-chlorophenyl) acetic acid': 'DDA', 'dda': 'DDA', 'p,p-dda': 'DDA', 'p,p\'-dda': 'DDA',
   '3-phenoxybenzoic acid': '3PBA', '3pba': '3PBA', '3-pba': '3PBA',
   'diethyl phosphate': 'DEP', 'dep': 'DEP',
   'diethyldithiophosphate': 'DEDTP', 'dedtp': 'DEDTP',
@@ -68,11 +69,15 @@ const MARKER_MAP = {
   // PARABENS
   'butylparaben': 'B_PARA', 'ethylparaben': 'E_PARA', 'methylparaben': 'M_PARA', 'propylparaben': 'P_PARA',
   
-  // PHTHALATES
-  'mono-(2-ethyl-5-hydroxyhexyl) phthalate': 'MEHHP', 'mono-2-ethyl-5-hydroxyhexyl phthalate': 'MEHHP', 'mehhp': 'MEHHP',
-  'mono-(2-ethyl-5-oxohexyl) phthalate': 'MEOHP', 'mono-2-ethyl-5-oxohexyl phthalate': 'MEOHP', 'meohp': 'MEOHP',
-  'mono-2-ethylhexyl phthalate': 'MEHP', 'mono-(2-ethylhexyl) phthalate': 'MEHP', 'mehp': 'MEHP',
-  'mono-ethyl phthalate': 'METP', 'monoethyl phthalate': 'METP', 'metp': 'METP', 'mep': 'METP',
+  // PHTHALATES - many naming variants
+  'mono-(2-ethyl-5-hydroxyhexyl) phthalate': 'MEHHP', 'mono-2-ethyl-5-hydroxyhexyl phthalate': 'MEHHP', 
+  'mono-(2-ethyl-5-hydroxyhexyl)phthalate': 'MEHHP', 'mehhp': 'MEHHP',
+  'mono-(2-ethyl-5-oxohexyl) phthalate': 'MEOHP', 'mono-2-ethyl-5-oxohexyl phthalate': 'MEOHP', 
+  'mono-(2-ethyl-5-oxohexyl)phthalate': 'MEOHP', 'meohp': 'MEOHP',
+  'mono-2-ethylhexyl phthalate': 'MEHP', 'mono-(2-ethylhexyl) phthalate': 'MEHP', 
+  'mono-(2-ethylhexyl)phthalate': 'MEHP', 'mehp': 'MEHP',
+  'mono-ethyl phthalate': 'METP', 'monoethyl phthalate': 'METP', 'mono-ethylphthalate': 'METP',
+  'metp': 'METP', 'mep': 'METP',
   
   // VOCs
   '2-hydroxyethyl mercapturic acid': '2HEMA', '2hema': '2HEMA', 'hema': '2HEMA',
@@ -143,8 +148,11 @@ const SNP_GENE_MAP = {
 function normalizeMarkerName(rawName) {
   if (!rawName) return 'UNKNOWN';
   let cleaned = rawName.toLowerCase().trim();
-  cleaned = cleaned.replace(/\s*\([^)]*\)\s*/g, ' ').trim();
-  cleaned = cleaned.replace(/\s*(ug\/g|ng\/g|µmol\/l|pg\/ml|ng\/ml)\s*/gi, '').trim();
+  
+  // Remove only unit suffixes in parentheses, not chemical structures
+  cleaned = cleaned.replace(/\s*\((ug\/g|ng\/g|µmol\/l|pg\/ml|ng\/ml|ppb|ppm)\)\s*/gi, '').trim();
+  // Remove standalone units
+  cleaned = cleaned.replace(/\s*(ug\/g|ng\/g|µmol\/l|pg\/ml|ng\/ml)\s*$/gi, '').trim();
   cleaned = cleaned.replace(/\s+/g, ' ');
   
   if (MARKER_MAP[cleaned]) return MARKER_MAP[cleaned];
