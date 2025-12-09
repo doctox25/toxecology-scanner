@@ -168,6 +168,35 @@ const MARKER_MAP = {
   'igf-i': 'IGF1',
   'igf-1': 'IGF1',
   'insulin-like growth factor': 'IGF1',
+
+  // === OXIDATIVE STRESS BIOMARKERS ===
+  '8-iso-prostaglandin f2α': 'ISO_PGF2A',
+  '8-isopgf2α': 'ISO_PGF2A',
+  '8-isopgf2a': 'ISO_PGF2A',
+  '11-β-prostaglandin f2α': 'PGF2A_11B',
+  '15(r)-prostaglandin f2α': 'PGF2A_15R',
+  'glutathione 4-hydroxynonenal': 'GS_HNE',
+  'gs-hne': 'GS_HNE',
+  'malondialdehyde': 'MDA',
+  '8-hydroxy-2-deoxyguanosine': '8OHDG',
+  '8-ohdg': '8OHDG',
+  '8-hydroxyguanine': '8OHG',
+  '8-hydroxyguanosine': '8OHGS',
+  '8-nitroguanine': '8NITROG',
+  '8-nitroguanosine': '8NITROGS',
+  '3-bromotyrosine': '3BTYR',
+  '3-chlorotyrosine': '3CLTYR',
+  'dityrosine': 'DITYR',
+  'nitrotyrosine': 'NITYR',
+  'nε-(carboxymethyl)lysine': 'CML',
+  'cml': 'CML',
+  'nε-carboxyethyllysine': 'CEL',
+  'cel': 'CEL',
+
+  // === METHYLATION SERUM ===
+  'homocysteine': 'HOMOCYS',
+  'vitamin b12 serum': 'B12',
+  'folate serum': 'FOLATE_SERUM',
 };
 
 function normalizeMarkerName(rawName) {
@@ -190,6 +219,85 @@ function normalizeMarkerName(rawName) {
   // Return cleaned name for manual review
   console.log('[Tribal Parser] Unmapped marker:', rawName);
   return `UNKNOWN_${rawName.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 20)}`;
+}
+
+// Attempt to repair and parse JSON
+function tryParseJSON(text) {
+  // First, try direct parse
+  try {
+    return JSON.parse(text);
+  } catch (e) {
+    console.log('[Tribal Parser] Direct parse failed, attempting repair...');
+  }
+
+  // Try to extract JSON object from response
+  const jsonMatch = text.match(/\{[\s\S]*\}/);
+  if (jsonMatch) {
+    let jsonStr = jsonMatch[0];
+    
+    // Fix common issues
+    // Remove trailing commas before } or ]
+    jsonStr = jsonStr.replace(/,(\s*[}\]])/g, '$1');
+    
+    // Try to fix unterminated strings by finding the last complete marker
+    const markersMatch = jsonStr.match(/"markers"\s*:\s*\[[\s\S]*\]/);
+    if (markersMatch) {
+      // Find last complete object in array
+      const arrayContent = markersMatch[0];
+      const lastCompleteObj = arrayContent.lastIndexOf('},');
+      if (lastCompleteObj > -1) {
+        // Truncate to last complete object
+        const truncated = arrayContent.substring(0, lastCompleteObj + 1) + ']';
+        jsonStr = jsonStr.replace(markersMatch[0], truncated);
+      }
+    }
+
+    try {
+      return JSON.parse(jsonStr);
+    } catch (e2) {
+      console.log('[Tribal Parser] Repair attempt 1 failed:', e2.message);
+    }
+
+    // More aggressive fix: find all complete marker objects
+    try {
+      const headerMatch = jsonStr.match(/"report_id"[\s\S]*?"markers"\s*:\s*\[/);
+      if (headerMatch) {
+        const markerObjects = [];
+        const markerRegex = /\{[^{}]*"marker_name"[^{}]*\}/g;
+        let match;
+        while ((match = markerRegex.exec(jsonStr)) !== null) {
+          try {
+            const obj = JSON.parse(match[0]);
+            markerObjects.push(obj);
+          } catch (e) {
+            // Skip malformed objects
+          }
+        }
+        
+        if (markerObjects.length > 0) {
+          // Reconstruct JSON
+          const reportIdMatch = jsonStr.match(/"report_id"\s*:\s*"([^"]*)"/);
+          const patientNameMatch = jsonStr.match(/"patient_name"\s*:\s*"([^"]*)"/);
+          const patientDobMatch = jsonStr.match(/"patient_dob"\s*:\s*"([^"]*)"/);
+          const patientSexMatch = jsonStr.match(/"patient_sex"\s*:\s*"([^"]*)"/);
+          const sampleDateMatch = jsonStr.match(/"sample_date"\s*:\s*"([^"]*)"/);
+          
+          return {
+            report_id: reportIdMatch ? reportIdMatch[1] : null,
+            patient_name: patientNameMatch ? patientNameMatch[1] : null,
+            patient_dob: patientDobMatch ? patientDobMatch[1] : null,
+            patient_sex: patientSexMatch ? patientSexMatch[1] : null,
+            sample_date: sampleDateMatch ? sampleDateMatch[1] : null,
+            markers: markerObjects
+          };
+        }
+      }
+    } catch (e3) {
+      console.log('[Tribal Parser] Repair attempt 2 failed:', e3.message);
+    }
+  }
+
+  return null;
 }
 
 exports.handler = async (event) => {
@@ -217,45 +325,45 @@ exports.handler = async (event) => {
 
     console.log('[Tribal Parser] Processing PDF for patient:', patientId);
 
-    const extractionPrompt = `Extract ALL lab results from this Tribal Diagnostics PDF report.
+    const extractionPrompt = `Extract ALL lab results from this Tribal Diagnostics / Vibrant Wellness PDF report.
 
 FIRST, extract patient information from the header:
-- patient_name: Full name as shown (e.g., "John Smith")
-- patient_dob: Date of birth (format as MM/DD/YYYY if possible)
-- patient_sex: Gender/Sex if shown (e.g., "Male", "Female")
-- report_id: Sample ID from header (e.g., "C25058397")
+- patient_name: Full name as shown
+- patient_dob: Date of birth (MM/DD/YYYY)
+- patient_sex: Gender/Sex if shown
+- report_id: Sample ID / Accession number from header
 - sample_date: Date collected
 
 THEN, for each marker/test result, extract:
-- marker_name: The exact marker name as shown (e.g., "Hemoglobin A1C %", "Free T3", "Testosterone")
-- value: The numeric result only (use the number from Normal or Abnormal column)
+- marker_name: The exact marker name as shown
+- value: The numeric result only (number from Normal or Abnormal column)
 - units: The unit of measurement
 - ref_low: Lower reference range (number only, null if none)
 - ref_high: Upper reference range (number only, null if none)
 - flag: "H" if high, "L" if low, "A" if abnormal, or null if normal
-- category: The section header (e.g., "Hormone", "Lipid", "Hematology", "Diabetes")
-- previous_value: The "Previous Result 1" value if shown, null otherwise
+- category: The section header (e.g., "Hormone", "Lipid", "Oxidative Stress", "Methylation")
+- previous_value: Previous result if shown, null otherwise
 
-Return ONLY valid JSON (no markdown, no code blocks):
+Return ONLY valid JSON (no markdown, no code blocks, no explanations):
 {
-  "report_id": "C25058397",
-  "patient_name": "John Smith",
+  "report_id": "2511176165",
+  "patient_name": "Josh Smith",
   "patient_dob": "05/15/1980",
   "patient_sex": "Male",
   "sample_date": "11/20/2025",
   "markers": [
-    {"marker_name": "TSH", "value": 3.60, "units": "uIU/mL", "ref_low": 0.35, "ref_high": 4.94, "flag": null, "category": "Thyroid", "previous_value": 2.80},
-    {"marker_name": "Hemoglobin A1C %", "value": 5.7, "units": "%", "ref_low": 4.2, "ref_high": 5.6, "flag": "H", "category": "Diabetes", "previous_value": 5.8}
+    {"marker_name": "TSH", "value": 3.60, "units": "uIU/mL", "ref_low": 0.35, "ref_high": 4.94, "flag": null, "category": "Thyroid", "previous_value": null}
   ]
 }
 
-CRITICAL:
-- Extract patient name, DOB, and sex from the PDF header FIRST
-- Extract ALL markers from ALL pages
+CRITICAL RULES:
+- Return ONLY the JSON object, nothing else
+- Extract ALL markers from ALL pages and ALL panels (Toxins, Oxidative Stress, Methylation, etc.)
 - Include BOTH normal AND abnormal results
-- For values like "<0.11", use 0.11 as the value
-- For reference ranges like ">60", set ref_low to 60, ref_high to null
-- Do NOT skip any markers`;
+- For values like "<0.11", use 0.11
+- For percentile-based results (P75, P95), use P95 as ref_high
+- Keep marker names short and clean
+- Do NOT include any text before or after the JSON`;
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -265,8 +373,8 @@ CRITICAL:
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 8000,
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 16000,
         messages: [{
           role: 'user',
           content: [
@@ -296,15 +404,27 @@ CRITICAL:
     const data = await response.json();
     let extractedText = data.content[0].text;
     
+    console.log('[Tribal Parser] Response length:', extractedText.length);
+    
     // Clean up response
     extractedText = extractedText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
     
-    let parsed;
-    try {
-      parsed = JSON.parse(extractedText);
-    } catch (parseError) {
-      console.error('[Tribal Parser] JSON parse error:', parseError);
-      return { statusCode: 500, headers, body: JSON.stringify({ error: 'Failed to parse Claude response', raw: extractedText.substring(0, 500) }) };
+    // Try to parse with repair logic
+    const parsed = tryParseJSON(extractedText);
+    
+    if (!parsed) {
+      console.error('[Tribal Parser] All JSON parse attempts failed');
+      console.error('[Tribal Parser] Raw response preview:', extractedText.substring(0, 1000));
+      console.error('[Tribal Parser] Raw response end:', extractedText.substring(extractedText.length - 500));
+      return { 
+        statusCode: 500, 
+        headers, 
+        body: JSON.stringify({ 
+          error: 'Failed to parse Claude response - JSON malformed', 
+          raw_start: extractedText.substring(0, 500),
+          raw_end: extractedText.substring(extractedText.length - 500)
+        }) 
+      };
     }
 
     const finalReportId = reportId || parsed.report_id || `RPT-${Date.now()}`;
