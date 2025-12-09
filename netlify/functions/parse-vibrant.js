@@ -37,7 +37,7 @@ const MARKER_MAP = {
   'perfluoro-n-[1,2-13c2] decanoic acid': 'MPFDA', 'mpfda': 'MPFDA',
   'perfluoro-n-[1,2-13c2] hexanoic acid': 'C13_PFHXA',
   'perfluorobutanoic acid': 'PFBA', 'pfba': 'PFBA',
-  'perfluorodecanoic acid': 'PFDEA', 'pfdea': 'PFDEA',
+  'perfluorodecanoic acid': 'PFDEA', 'pfdea': 'PFDEA', 'pfda': 'PFDEA',
   'perfluorododecanoic acid': 'PFDOA', 'pfdoa': 'PFDOA',
   'perfluoroheptanoic acid': 'PFHPA', 'pfhpa': 'PFHPA',
   'perfluorohexane sulfonic acid': 'PFHXS', 'pfhxs': 'PFHXS',
@@ -56,8 +56,8 @@ const MARKER_MAP = {
   // HERBICIDES/PESTICIDES
   '2,4-dichlorophenoxyacetic acid': '2_4_D', '2,4-d': '2_4_D',
   'atrazine': 'ATRA', 'atrazine mercapturate': 'ATRA_M', 'glyphosate': 'GLYP',
-  '2,2-bis(4-chlorophenyl) acetic acid': 'DDA', 'dda': 'DDA',
-  '3-phenoxybenzoic acid': '3PBA', '3pba': '3PBA',
+  '2,2-bis(4-chlorophenyl) acetic acid': 'DDA', '2,2-bis(4-chlorophenyl)acetic acid': 'DDA', 'dda': 'DDA', 'p,p-dda': 'DDA',
+  '3-phenoxybenzoic acid': '3PBA', '3pba': '3PBA', '3-pba': '3PBA',
   'diethyl phosphate': 'DEP', 'dep': 'DEP',
   'diethyldithiophosphate': 'DEDTP', 'dedtp': 'DEDTP',
   'diethylthiophosphate': 'DETP', 'detp': 'DETP',
@@ -69,10 +69,10 @@ const MARKER_MAP = {
   'butylparaben': 'B_PARA', 'ethylparaben': 'E_PARA', 'methylparaben': 'M_PARA', 'propylparaben': 'P_PARA',
   
   // PHTHALATES
-  'mono-(2-ethyl-5-hydroxyhexyl) phthalate': 'MEHHP', 'mehhp': 'MEHHP',
-  'mono-(2-ethyl-5-oxohexyl) phthalate': 'MEOHP', 'meohp': 'MEOHP',
-  'mono-2-ethylhexyl phthalate': 'MEHP', 'mehp': 'MEHP',
-  'mono-ethyl phthalate': 'METP', 'metp': 'METP',
+  'mono-(2-ethyl-5-hydroxyhexyl) phthalate': 'MEHHP', 'mono-2-ethyl-5-hydroxyhexyl phthalate': 'MEHHP', 'mehhp': 'MEHHP',
+  'mono-(2-ethyl-5-oxohexyl) phthalate': 'MEOHP', 'mono-2-ethyl-5-oxohexyl phthalate': 'MEOHP', 'meohp': 'MEOHP',
+  'mono-2-ethylhexyl phthalate': 'MEHP', 'mono-(2-ethylhexyl) phthalate': 'MEHP', 'mehp': 'MEHP',
+  'mono-ethyl phthalate': 'METP', 'monoethyl phthalate': 'METP', 'metp': 'METP', 'mep': 'METP',
   
   // VOCs
   '2-hydroxyethyl mercapturic acid': '2HEMA', '2hema': '2HEMA', 'hema': '2HEMA',
@@ -80,11 +80,11 @@ const MARKER_MAP = {
   '2-methylhippuric acid': '2MHA', '2mha': '2MHA',
   '3-methylhippuric acid': '3MHA', '3mha': '3MHA',
   '4-methylhippuric acid': '4MHA', '4mha': '4MHA',
-  'n-acetyl (2-cyanoethyl) cysteine': 'NACE', 'nace': 'NACE',
-  'n-acetyl (2,hydroxypropyl) cysteine': 'NAHP', 'nahp': 'NAHP',
-  'n-acetyl (3,4-dihydroxybutyl) cysteine': 'NADC', 'nadc': 'NADC',
-  'n-acetyl (propyl) cysteine': 'NAPR', 'napr': 'NAPR',
-  'n-acetyl phenyl cysteine': 'NAP', 'nap': 'NAP',
+  'n-acetyl (2-cyanoethyl) cysteine': 'NACE', 'n-acetyl-s-(2-cyanoethyl)-cysteine': 'NACE', 'n-acetyl-2-cyanoethyl-cysteine': 'NACE', 'nace': 'NACE',
+  'n-acetyl (2,hydroxypropyl) cysteine': 'NAHP', 'n-acetyl-s-(2-hydroxypropyl)-cysteine': 'NAHP', 'n-acetyl-2-hydroxypropyl-cysteine': 'NAHP', 'nahp': 'NAHP',
+  'n-acetyl (3,4-dihydroxybutyl) cysteine': 'NADC', 'n-acetyl-s-(3,4-dihydroxybutyl)-cysteine': 'NADC', 'nadc': 'NADC',
+  'n-acetyl (propyl) cysteine': 'NAPR', 'n-acetyl-s-propyl-cysteine': 'NAPR', 'napr': 'NAPR',
+  'n-acetyl phenyl cysteine': 'NAP', 'n-acetyl-s-phenyl-cysteine': 'NAP', 'nap': 'NAP',
   'phenyl glyoxylic acid': 'PGO', 'pgo': 'PGO',
   
   // OTHER
