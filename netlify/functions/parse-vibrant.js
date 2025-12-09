@@ -522,7 +522,7 @@ RULES:
 
     const response = await client.messages.create({
       model: 'claude-3-5-haiku-20241022',  // Using Haiku for speed (Pro plan 26s limit)
-      max_tokens: 16000,
+      max_tokens: 8192,
       messages: [
         {
           role: 'user',
