@@ -195,6 +195,25 @@
       background: #b8e600;
     }
     
+    .btn-group {
+      display: flex;
+      gap: 10px;
+    }
+    
+    .download-btn {
+      padding: 10px 20px;
+      background: #00D9FF;
+      border: none;
+      border-radius: 6px;
+      color: #0A1628;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    
+    .download-btn:hover {
+      background: #00b8d9;
+    }
+    
     .stats {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
@@ -304,7 +323,10 @@
     <div class="results" id="results">
       <div class="results-header">
         <h2>Extracted Results</h2>
-        <button class="copy-btn" id="copyBtn">📋 Copy TSV for Airtable</button>
+        <div class="btn-group">
+          <button class="copy-btn" id="copyBtn">📋 Copy TSV</button>
+          <button class="download-btn" id="downloadBtn">⬇️ Download TSV</button>
+        </div>
       </div>
       
       <div class="stats">
@@ -357,6 +379,7 @@
     const results = document.getElementById('results');
     const resultsTable = document.getElementById('resultsTable');
     const copyBtn = document.getElementById('copyBtn');
+    const downloadBtn = document.getElementById('downloadBtn');
     const patientIdInput = document.getElementById('patientId');
     const reportIdInput = document.getElementById('reportId');
     
@@ -476,9 +499,37 @@
       navigator.clipboard.writeText(tsv).then(() => {
         copyBtn.textContent = '✅ Copied!';
         setTimeout(() => {
-          copyBtn.textContent = '📋 Copy TSV for Airtable';
+          copyBtn.textContent = '📋 Copy TSV';
         }, 2000);
       });
+    });
+    
+    // Download button handler
+    downloadBtn.addEventListener('click', () => {
+      if (extractedResults.length === 0) return;
+      
+      // Create TSV with headers
+      const headers = ['result_id', 'report_id', 'patient_id', 'marker_id_inbox', 'value'];
+      const rows = extractedResults.map(r => 
+        [r.result_id, r.report_id, r.patient_id || '', r.marker_id_inbox, r.value].join('\t')
+      );
+      const tsv = headers.join('\t') + '\n' + rows.join('\n');
+      
+      // Create download
+      const blob = new Blob([tsv], { type: 'text/tab-separated-values' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `vibrant_results_${reportIdInput.value || 'export'}.tsv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      downloadBtn.textContent = '✅ Downloaded!';
+      setTimeout(() => {
+        downloadBtn.textContent = '⬇️ Download TSV';
+      }, 2000);
     });
     
     // Utility functions
