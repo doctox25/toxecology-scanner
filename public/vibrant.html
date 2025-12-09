@@ -446,12 +446,18 @@
         
         const data = await response.json();
         
+        // Debug logging
+        console.log('Response status:', response.status);
+        console.log('Response data:', data);
+        console.log('Results array:', data.results);
+        
         if (!response.ok || data.error) {
           throw new Error(data.error || data.message || 'API request failed');
         }
         
         // Success!
         extractedResults = data.results || [];
+        console.log('Extracted results count:', extractedResults.length);
         reportIdInput.value = data.report_id || '';
         
         // Update stats
