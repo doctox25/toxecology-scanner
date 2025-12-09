@@ -302,17 +302,47 @@ Use 0 for "<LOD". Return ONLY JSON.`;
       };
     }
 
+    // Helper to extract markers from various possible keys
+    function extractMarkers(obj) {
+      if (!obj) return [];
+      
+      let markers = [];
+      
+      // Check for direct markers array
+      if (Array.isArray(obj.markers)) markers.push(...obj.markers);
+      
+      // Check for category-specific arrays
+      const categoryKeys = ['mycotoxins', 'heavy_metals', 'metals', 'pfas', 'pfas_compounds',
+                           'environmental', 'environmental_phenols', 'pesticides', 'herbicides',
+                           'phthalates', 'parabens', 'vocs', 'other', 'other_markers',
+                           'environmental_pollutants', 'organophosphates'];
+      
+      for (const key of categoryKeys) {
+        if (Array.isArray(obj[key])) {
+          markers.push(...obj[key]);
+        }
+      }
+      
+      // If obj itself is an array of markers
+      if (Array.isArray(obj)) {
+        markers.push(...obj);
+      }
+      
+      return markers;
+    }
+
     const reportId = parsed1.report_id || 'UNKNOWN';
     const panelType = parsed1.panel_type || 'VIB';
-    let allMarkers = Array.isArray(parsed1.markers) ? parsed1.markers : [];
+    let allMarkers = extractMarkers(parsed1);
     let allGenetics = Array.isArray(parsed1.genetics) ? parsed1.genetics : [];
 
     console.log(`[Vibrant Parser] Pass 1 - Report ID: ${reportId}, Panel: ${panelType}, Markers: ${allMarkers.length}`);
 
     // Add pass 2 markers
-    if (parsed2 && Array.isArray(parsed2.markers)) {
-      console.log(`[Vibrant Parser] Pass 2 - Got ${parsed2.markers.length} additional markers`);
-      allMarkers = [...allMarkers, ...parsed2.markers];
+    const pass2Markers = extractMarkers(parsed2);
+    if (pass2Markers.length > 0) {
+      console.log(`[Vibrant Parser] Pass 2 - Got ${pass2Markers.length} additional markers`);
+      allMarkers = [...allMarkers, ...pass2Markers];
     }
 
     console.log(`[Vibrant Parser] Total markers: ${allMarkers.length}`);
