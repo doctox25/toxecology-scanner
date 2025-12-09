@@ -433,10 +433,29 @@ CRITICAL RULES:
     console.log('[Tribal Parser] Extracted', parsed.markers?.length || 0, 'markers');
 
     // Format results
-    const results = (parsed.markers || []).map((marker, index) => {
-      const markerId = normalizeMarkerName(marker.marker_name);
+    // Detect panel type from markers
+function detectPanelType(markers) {
+  const markerNames = markers.map(m => (m.marker_name || '').toLowerCase()).join(' ');
+  if (markerNames.includes('8-ohdg') || markerNames.includes('malondialdehyde') || markerNames.includes('isoprostag') || markerNames.includes('nitrotyrosine')) {
+    return 'OX';
+  }
+  if (markerNames.includes('mthfr') || markerNames.includes('comt') || markerNames.includes('methylation') || (markerNames.includes('homocysteine') && markerNames.includes('folate'))) {
+    return 'METH';
+  }
+  if (markerNames.includes('ochratoxin') || markerNames.includes('aflatoxin') || markerNames.includes('pfos') || markerNames.includes('pfoa') || markerNames.includes('glyphosate')) {
+    return 'TOX';
+  }
+  return 'LAB'; // Default for standard blood panels
+}
+
+const panelType = detectPanelType(parsed.markers || []);
+console.log('[Tribal Parser] Detected panel type:', panelType);
+
+// Format results
+const results = (parsed.markers || []).map((marker, index) => {
+  const markerId = normalizeMarkerName(marker.marker_name);
       return {
-        result_id: `${finalReportId}-${String(index + 1).padStart(3, '0')}`,
+        result_id: `${finalReportId}-${panelType}-${String(index + 1).padStart(3, '0')}`,
         report_id: finalReportId,
         patient_id: patientId || '',
         marker_id_inbox: markerId,
