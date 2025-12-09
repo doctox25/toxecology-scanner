@@ -21,7 +21,7 @@ const MARKER_MAP = {
   'verrucarin a': 'VER_A', 'verrucarin j': 'VER_J',
   'verrucarol': 'VERRUCAROL',
   
-  // HEAVY METALS
+  // HEAVY METALS (including direct uppercase)
   'aluminum': 'ALU', 'antimony': 'ANT', 'arsenic': 'ARS', 'barium': 'BAR', 'beryllium': 'BER', 'bismuth': 'BIS',
   'cadmium': 'CAD', 'cesium': 'CES', 'gadolinium': 'GAD', 'lead': 'LEAD', 'mercury': 'MERC', 'nickel': 'NICK',
   'palladium': 'PALL', 'platinum': 'PLAT', 'tellurium': 'TELL', 'thallium': 'THAL', 'thorium': 'THOR',
@@ -502,9 +502,12 @@ List EACH marker as a separate object. Return ONLY valid JSON, no markdown.`;
       }
       seenMarkers.add(markerId);
       
-      // Log unmapped markers (first 10 only)
-      if (markerId === rawName.toUpperCase().replace(/[^A-Z0-9]/g, '_').substring(0, 20) && unmappedCount < 10) {
-        console.log(`[Vibrant Parser] Unmapped marker: ${rawName} (${markerId})`);
+      // Track if marker was truly unmapped (hit fallback path in normalizeMarkerName)
+      // A marker is unmapped if lowercase version isn't in MARKER_MAP
+      const cleanedName = rawName.toLowerCase().trim().replace(/\s+/g, ' ');
+      const isMapped = markerId !== cleanedName.toUpperCase().replace(/[^A-Z0-9]/g, '_').substring(0, 20);
+      if (!isMapped && unmappedCount < 10) {
+        console.log(`[Vibrant Parser] Truly unmapped: ${rawName} → ${markerId}`);
         unmappedCount++;
       }
       
