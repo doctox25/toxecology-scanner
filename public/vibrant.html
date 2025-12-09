@@ -3,301 +3,501 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ToxEcology - Vibrant PDF Parser</title>
+  <title>Vibrant PDF Parser | ToxEcology</title>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: linear-gradient(135deg, #0a1628 0%, #1a2744 100%);
+      background: linear-gradient(135deg, #0A1628 0%, #1a2a4a 100%);
       min-height: 100vh;
-      color: #e0e0e0;
+      color: #fff;
       padding: 20px;
     }
-    .container { max-width: 900px; margin: 0 auto; }
-    h1 { text-align: center; color: #00d4aa; margin-bottom: 8px; font-size: 28px; }
-    .subtitle { text-align: center; color: #888; margin-bottom: 24px; font-size: 14px; }
-    .card {
-      background: rgba(255,255,255,0.05);
-      border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 12px;
-      padding: 24px;
+    
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    
+    h1 {
+      text-align: center;
+      color: #00D9FF;
+      margin-bottom: 8px;
+      font-size: 2rem;
+    }
+    
+    .subtitle {
+      text-align: center;
+      color: #8892a0;
+      margin-bottom: 30px;
+    }
+    
+    .form-group {
       margin-bottom: 20px;
     }
-    .form-row { display: flex; gap: 16px; margin-bottom: 16px; }
-    .form-group { flex: 1; }
-    label { display: block; margin-bottom: 6px; color: #00d4aa; font-weight: 500; font-size: 14px; }
+    
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    
+    label {
+      display: block;
+      color: #00D9FF;
+      margin-bottom: 8px;
+      font-size: 0.9rem;
+    }
+    
     input[type="text"] {
       width: 100%;
-      padding: 12px;
-      border: 1px solid rgba(255,255,255,0.2);
+      padding: 12px 16px;
+      background: #1a2a4a;
+      border: 1px solid #2a3a5a;
       border-radius: 8px;
-      background: rgba(0,0,0,0.3);
       color: #fff;
-      font-size: 15px;
+      font-size: 1rem;
     }
-    input[type="file"] { display: none; }
+    
+    input[type="text"]:focus {
+      outline: none;
+      border-color: #00D9FF;
+    }
+    
     .upload-area {
-      border: 2px dashed rgba(0,212,170,0.5);
+      border: 2px dashed #00D9FF;
       border-radius: 12px;
-      padding: 32px;
+      padding: 40px;
       text-align: center;
       cursor: pointer;
       transition: all 0.3s;
-      margin-bottom: 16px;
+      background: rgba(0, 217, 255, 0.05);
     }
-    .upload-area:hover, .upload-area.has-file {
-      border-color: #00d4aa;
-      background: rgba(0,212,170,0.1);
+    
+    .upload-area:hover {
+      background: rgba(0, 217, 255, 0.1);
     }
-    .upload-icon { font-size: 36px; margin-bottom: 8px; }
+    
+    .upload-area.has-file {
+      border-color: #CCFF00;
+      background: rgba(204, 255, 0, 0.1);
+    }
+    
+    .upload-icon {
+      font-size: 48px;
+      margin-bottom: 10px;
+    }
+    
+    .upload-text {
+      color: #8892a0;
+    }
+    
+    .file-name {
+      color: #CCFF00;
+      margin-top: 10px;
+      font-weight: 500;
+    }
+    
+    #fileInput {
+      display: none;
+    }
+    
     .btn {
-      background: linear-gradient(135deg, #00d4aa 0%, #00b894 100%);
-      color: #0a1628;
+      width: 100%;
+      padding: 16px;
+      background: linear-gradient(135deg, #00D9FF 0%, #00a8cc 100%);
       border: none;
-      padding: 14px 28px;
       border-radius: 8px;
-      font-size: 16px;
+      color: #0A1628;
+      font-size: 1.1rem;
       font-weight: 600;
       cursor: pointer;
-      width: 100%;
+      transition: all 0.3s;
+      margin-top: 20px;
     }
-    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-    .btn:hover:not(:disabled) { transform: translateY(-1px); }
-    .results-section { display: none; }
-    .results-section.visible { display: block; }
+    
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 20px rgba(0, 217, 255, 0.4);
+    }
+    
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+    
     .status {
-      padding: 14px;
+      padding: 16px;
       border-radius: 8px;
-      margin-bottom: 20px;
+      margin-top: 20px;
       text-align: center;
-      font-weight: 500;
+      display: none;
     }
-    .status.loading { background: rgba(255,193,7,0.2); color: #ffc107; }
-    .status.success { background: rgba(0,212,170,0.2); color: #00d4aa; }
-    .status.error { background: rgba(255,82,82,0.2); color: #ff5252; }
-    table { width: 100%; border-collapse: collapse; margin-top: 16px; font-size: 13px; }
-    th, td { padding: 10px 8px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.1); }
-    th { background: rgba(0,212,170,0.2); color: #00d4aa; font-weight: 600; }
+    
+    .status.error {
+      display: block;
+      background: rgba(255, 68, 68, 0.2);
+      border: 1px solid #ff4444;
+      color: #ff6666;
+    }
+    
+    .status.success {
+      display: block;
+      background: rgba(204, 255, 0, 0.2);
+      border: 1px solid #CCFF00;
+      color: #CCFF00;
+    }
+    
+    .status.loading {
+      display: block;
+      background: rgba(0, 217, 255, 0.2);
+      border: 1px solid #00D9FF;
+      color: #00D9FF;
+    }
+    
+    .results {
+      margin-top: 30px;
+      display: none;
+    }
+    
+    .results.show {
+      display: block;
+    }
+    
+    .results-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+    
+    .results h2 {
+      color: #00D9FF;
+    }
+    
     .copy-btn {
-      background: rgba(0,212,170,0.2);
-      color: #00d4aa;
-      border: 1px solid #00d4aa;
-      padding: 10px 16px;
+      padding: 10px 20px;
+      background: #CCFF00;
+      border: none;
       border-radius: 6px;
+      color: #0A1628;
+      font-weight: 600;
       cursor: pointer;
-      font-size: 13px;
-      font-weight: 500;
     }
-    .copy-btn:hover { background: rgba(0,212,170,0.3); }
-    .btn-group { display: flex; gap: 10px; flex-wrap: wrap; margin: 16px 0; }
-    .info-box {
-      background: rgba(0,212,170,0.1);
-      border-left: 4px solid #00d4aa;
-      padding: 12px 16px;
-      margin-bottom: 16px;
-      border-radius: 0 8px 8px 0;
-      font-size: 13px;
+    
+    .copy-btn:hover {
+      background: #b8e600;
     }
-    code { background: rgba(0,0,0,0.4); padding: 2px 6px; border-radius: 4px; font-size: 12px; }
-    .table-wrapper { max-height: 400px; overflow-y: auto; border-radius: 8px; }
+    
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+    
+    .stat-box {
+      background: rgba(0, 217, 255, 0.1);
+      border: 1px solid #2a3a5a;
+      border-radius: 8px;
+      padding: 15px;
+      text-align: center;
+    }
+    
+    .stat-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #00D9FF;
+    }
+    
+    .stat-label {
+      font-size: 0.8rem;
+      color: #8892a0;
+      margin-top: 5px;
+    }
+    
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: rgba(26, 42, 74, 0.5);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    
+    th, td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid #2a3a5a;
+    }
+    
+    th {
+      background: rgba(0, 217, 255, 0.2);
+      color: #00D9FF;
+      font-weight: 600;
+    }
+    
+    tr:hover {
+      background: rgba(0, 217, 255, 0.05);
+    }
+    
+    .table-container {
+      max-height: 400px;
+      overflow-y: auto;
+      border-radius: 8px;
+    }
+    
+    .marker-type {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    
+    .marker-type.biomarker {
+      background: rgba(0, 217, 255, 0.2);
+      color: #00D9FF;
+    }
+    
+    .marker-type.snp {
+      background: rgba(204, 255, 0, 0.2);
+      color: #CCFF00;
+    }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>🧬 Vibrant PDF Parser</h1>
+    <h1>🧪 Vibrant PDF Parser</h1>
     <p class="subtitle">Upload a Vibrant Wellness lab report to extract results</p>
-
-    <div class="card">
-      <div class="form-row">
-        <div class="form-group">
-          <label>Patient ID</label>
-          <input type="text" id="patientId" placeholder="e.g., CL-023">
-        </div>
-        <div class="form-group">
-          <label>Report ID</label>
-          <input type="text" id="reportId" placeholder="e.g., 2510286851">
-        </div>
+    
+    <div class="form-row">
+      <div class="form-group">
+        <label>Patient ID</label>
+        <input type="text" id="patientId" placeholder="e.g., CL-002">
       </div>
-      
-      <label>Vibrant PDF</label>
-      <div class="upload-area" id="uploadArea" onclick="document.getElementById('pdfFile').click()">
-        <div class="upload-icon">📄</div>
-        <div id="uploadText">Click to upload PDF or drag & drop</div>
+      <div class="form-group">
+        <label>Report ID</label>
+        <input type="text" id="reportId" placeholder="Auto-detected from PDF" readonly>
       </div>
-      <input type="file" id="pdfFile" accept=".pdf" onchange="handleFileSelect(event)">
-      
-      <button class="btn" id="parseBtn" onclick="parsePdf()" disabled>
-        🔬 Extract Lab Results
-      </button>
     </div>
-
-    <div id="status"></div>
-
-    <div class="results-section" id="resultsSection">
-      <div class="card">
-        <h2 style="color: #00d4aa; margin-bottom: 12px; font-size: 18px;">📊 Extracted Results</h2>
-        
-        <div class="info-box" id="reportInfo"></div>
-        
-        <div class="btn-group">
-          <button class="copy-btn" onclick="copyAsCSV()">📋 Copy CSV for Airtable</button>
-          <button class="copy-btn" onclick="downloadCSV()">⬇️ Download CSV</button>
+    
+    <div class="form-group">
+      <label>Vibrant PDF</label>
+      <div class="upload-area" id="uploadArea">
+        <div class="upload-icon">📄</div>
+        <div class="upload-text">Click or drag PDF here</div>
+        <div class="file-name" id="fileName"></div>
+      </div>
+      <input type="file" id="fileInput" accept=".pdf">
+    </div>
+    
+    <button class="btn" id="extractBtn">🔬 Extract Lab Results</button>
+    
+    <div class="status" id="status"></div>
+    
+    <div class="results" id="results">
+      <div class="results-header">
+        <h2>Extracted Results</h2>
+        <button class="copy-btn" id="copyBtn">📋 Copy TSV for Airtable</button>
+      </div>
+      
+      <div class="stats">
+        <div class="stat-box">
+          <div class="stat-value" id="totalCount">0</div>
+          <div class="stat-label">Total Results</div>
         </div>
-
-        <div class="table-wrapper">
-          <table>
-            <thead>
-              <tr>
-                <th>result_id</th>
-                <th>report_id</th>
-                <th>patient_id</th>
-                <th>marker_id_inbox</th>
-                <th>value</th>
-              </tr>
-            </thead>
-            <tbody id="resultsBody"></tbody>
-          </table>
+        <div class="stat-box">
+          <div class="stat-value" id="biomarkerCount">0</div>
+          <div class="stat-label">Biomarkers</div>
         </div>
+        <div class="stat-box">
+          <div class="stat-value" id="snpCount">0</div>
+          <div class="stat-label">SNPs</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value" id="panelType">-</div>
+          <div class="stat-label">Panel Type</div>
+        </div>
+      </div>
+      
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Result ID</th>
+              <th>Marker ID</th>
+              <th>Value</th>
+              <th>Type</th>
+            </tr>
+          </thead>
+          <tbody id="resultsTable">
+          </tbody>
+        </table>
       </div>
     </div>
   </div>
 
   <script>
+    // Global state
     let selectedFile = null;
-    let parsedResults = [];
-
-    function handleFileSelect(event) {
-      const file = event.target.files[0];
-      if (file && file.type === 'application/pdf') {
-        selectedFile = file;
-        document.getElementById('uploadArea').classList.add('has-file');
-        document.getElementById('uploadText').textContent = `✅ ${file.name}`;
-        document.getElementById('parseBtn').disabled = false;
-      }
-    }
-
+    let extractedResults = [];
+    
+    // DOM elements
     const uploadArea = document.getElementById('uploadArea');
-    uploadArea.addEventListener('dragover', (e) => { e.preventDefault(); });
+    const fileInput = document.getElementById('fileInput');
+    const fileName = document.getElementById('fileName');
+    const extractBtn = document.getElementById('extractBtn');
+    const status = document.getElementById('status');
+    const results = document.getElementById('results');
+    const resultsTable = document.getElementById('resultsTable');
+    const copyBtn = document.getElementById('copyBtn');
+    const patientIdInput = document.getElementById('patientId');
+    const reportIdInput = document.getElementById('reportId');
+    
+    // File selection handlers
+    uploadArea.addEventListener('click', () => fileInput.click());
+    
+    uploadArea.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      uploadArea.style.borderColor = '#CCFF00';
+    });
+    
+    uploadArea.addEventListener('dragleave', () => {
+      uploadArea.style.borderColor = '#00D9FF';
+    });
+    
     uploadArea.addEventListener('drop', (e) => {
       e.preventDefault();
       const file = e.dataTransfer.files[0];
       if (file && file.type === 'application/pdf') {
-        selectedFile = file;
-        document.getElementById('uploadArea').classList.add('has-file');
-        document.getElementById('uploadText').textContent = `✅ ${file.name}`;
-        document.getElementById('parseBtn').disabled = false;
+        handleFile(file);
       }
     });
-
-    async function parsePdf() {
-      if (!selectedFile) return;
-
-      const patientId = document.getElementById('patientId').value.trim();
-      const reportId = document.getElementById('reportId').value.trim();
-      const statusEl = document.getElementById('status');
+    
+    fileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        handleFile(file);
+      }
+    });
+    
+    function handleFile(file) {
+      selectedFile = file;
+      fileName.textContent = '✅ ' + file.name;
+      uploadArea.classList.add('has-file');
+      status.className = 'status';
+      status.style.display = 'none';
+    }
+    
+    // Extract button handler
+    extractBtn.addEventListener('click', async () => {
+      if (!selectedFile) {
+        showStatus('error', '❌ Please select a PDF file first');
+        return;
+      }
       
-      statusEl.className = 'status loading';
-      statusEl.textContent = '🔄 Extracting markers... (30-45 seconds)';
-      statusEl.style.display = 'block';
-      document.getElementById('parseBtn').disabled = true;
-      document.getElementById('resultsSection').classList.remove('visible');
-
+      extractBtn.disabled = true;
+      showStatus('loading', '🔄 Claude is reading the PDF... (this takes 30-60 seconds)');
+      
       try {
+        // Convert file to base64
         const base64 = await fileToBase64(selectedFile);
-
+        
+        // Call the API
         const response = await fetch('/.netlify/functions/parse-vibrant', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            pdfBase64: base64, 
-            patientId: patientId,
-            reportId: reportId 
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            pdf: base64,
+            patient_id: patientIdInput.value || ''
           })
         });
-
+        
         const data = await response.json();
-
-        if (!response.ok || !data.success) {
-          throw new Error(data.error || 'Parsing failed');
+        
+        if (!response.ok || data.error) {
+          throw new Error(data.error || data.message || 'API request failed');
         }
-
-        parsedResults = data.results;
-        displayResults(data);
-
-        statusEl.className = 'status success';
-        statusEl.textContent = `✅ Successfully extracted ${data.count} markers!`;
-
+        
+        // Success!
+        extractedResults = data.results || [];
+        reportIdInput.value = data.report_id || '';
+        
+        // Update stats
+        document.getElementById('totalCount').textContent = data.total_count || extractedResults.length;
+        document.getElementById('biomarkerCount').textContent = data.biomarker_count || 0;
+        document.getElementById('snpCount').textContent = data.snp_count || 0;
+        document.getElementById('panelType').textContent = data.panel_type || 'VIB';
+        
+        // Populate table
+        resultsTable.innerHTML = '';
+        extractedResults.forEach(r => {
+          const tr = document.createElement('tr');
+          const typeClass = r.marker_type === 'snp' ? 'snp' : 'biomarker';
+          tr.innerHTML = `
+            <td>${r.result_id}</td>
+            <td>${r.marker_id_inbox}</td>
+            <td>${r.value}</td>
+            <td><span class="marker-type ${typeClass}">${r.marker_type || 'biomarker'}</span></td>
+          `;
+          resultsTable.appendChild(tr);
+        });
+        
+        results.classList.add('show');
+        showStatus('success', `✅ Extracted ${extractedResults.length} results from ${data.panel_type || 'Vibrant'} panel`);
+        
       } catch (error) {
-        statusEl.className = 'status error';
-        statusEl.textContent = `❌ Error: ${error.message}`;
+        console.error('Error:', error);
+        showStatus('error', '❌ Error: ' + error.message);
+      } finally {
+        extractBtn.disabled = false;
       }
-
-      document.getElementById('parseBtn').disabled = false;
-    }
-
+    });
+    
+    // Copy button handler
+    copyBtn.addEventListener('click', () => {
+      if (extractedResults.length === 0) return;
+      
+      // Create TSV with headers
+      const headers = ['result_id', 'report_id', 'patient_id', 'marker_id_inbox', 'value'];
+      const rows = extractedResults.map(r => 
+        [r.result_id, r.report_id, r.patient_id || '', r.marker_id_inbox, r.value].join('\t')
+      );
+      const tsv = headers.join('\t') + '\n' + rows.join('\n');
+      
+      navigator.clipboard.writeText(tsv).then(() => {
+        copyBtn.textContent = '✅ Copied!';
+        setTimeout(() => {
+          copyBtn.textContent = '📋 Copy TSV for Airtable';
+        }, 2000);
+      });
+    });
+    
+    // Utility functions
     function fileToBase64(file) {
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
-        reader.onload = () => resolve(reader.result.split(',')[1]);
+        reader.onload = () => {
+          // Remove the data:application/pdf;base64, prefix
+          const base64 = reader.result.split(',')[1];
+          resolve(base64);
+        };
         reader.onerror = reject;
         reader.readAsDataURL(file);
       });
     }
-
-    function displayResults(data) {
-      document.getElementById('reportInfo').innerHTML = `
-        <strong>Report:</strong> ${data.report_id} &nbsp;|&nbsp; 
-        <strong>Patient:</strong> ${data.patient_id || '(not set)'} &nbsp;|&nbsp;
-        <strong>Markers:</strong> ${data.count}
-      `;
-
-      const tbody = document.getElementById('resultsBody');
-      tbody.innerHTML = data.results.map(r => `
-        <tr>
-          <td><code>${r.result_id}</code></td>
-          <td>${r.report_id}</td>
-          <td>${r.patient_id || ''}</td>
-          <td><strong>${r.marker_id_inbox}</strong></td>
-          <td>${r.value}</td>
-        </tr>
-      `).join('');
-
-      document.getElementById('resultsSection').classList.add('visible');
-    }
-
-    function copyAsCSV() {
-      // Tab-separated for Airtable paste
-      const headers = ['result_id', 'report_id', 'patient_id', 'marker_id_inbox', 'value'];
-      const rows = parsedResults.map(r => [
-        r.result_id,
-        r.report_id,
-        r.patient_id,
-        r.marker_id_inbox,
-        r.value
-      ].join('\t'));
-      
-      const csv = [headers.join('\t'), ...rows].join('\n');
-      navigator.clipboard.writeText(csv);
-      alert('✅ Copied to clipboard!\n\nGo to Airtable results table → Click first empty cell → Paste (Cmd+V)');
-    }
-
-    function downloadCSV() {
-      const headers = ['result_id', 'report_id', 'patient_id', 'marker_id_inbox', 'value'];
-      const rows = parsedResults.map(r => [
-        r.result_id,
-        r.report_id,
-        r.patient_id,
-        r.marker_id_inbox,
-        r.value
-      ].join(','));
-      
-      const csv = [headers.join(','), ...rows].join('\n');
-      const blob = new Blob([csv], { type: 'text/csv' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `vibrant-${parsedResults[0]?.report_id || 'results'}.csv`;
-      a.click();
+    
+    function showStatus(type, message) {
+      status.className = 'status ' + type;
+      status.textContent = message;
     }
   </script>
 </body>
