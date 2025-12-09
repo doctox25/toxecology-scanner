@@ -1,658 +1,530 @@
-const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
+// parse-vibrant.js - Vibrant Wellness PDF Parser v3.0
+// Handles: Total Tox, Oxidative Stress (biomarkers + genetics), Methylation (biomarkers + genetics)
 
-// EXACT marker_id mappings from ToxEcology Marker_Vocabulary ontology
+const Anthropic = require("@anthropic-ai/sdk").default;
+
+// ============================================================================
+// BIOMARKER MAPPINGS - Maps Vibrant PDF names to ToxEcology marker_ids
+// ============================================================================
+
 const MARKER_MAP = {
-  // ===== DOM_METALS (20 markers) =====
-  'mercury': 'MERC',
-  'uranium': 'URAN',
-  'cadmium': 'CAD',
-  'lead': 'LEAD',
-  'palladium': 'PALL',
-  'bismuth': 'BIS',
-  'beryllium': 'BER',
-  'antimony': 'ANT',
-  'nickel': 'NICK',
-  'thorium': 'THOR',
-  'platinum': 'PLAT',
-  'gadolinium': 'GAD',
-  'barium': 'BAR',
-  'tungsten': 'TUNG',
-  'thallium': 'THAL',
-  'arsenic': 'ARS',
-  'aluminum': 'ALU',
-  'cesium': 'CES',
-  'tin': 'TIN',
-  'tellurium': 'TELL',
-
-  // ===== DOM_MYCOTOX (31 markers) =====
-  'aflatoxin b2': 'AFB2',
+  // ==================== MYCOTOXINS ====================
   'aflatoxin b1': 'AFB1',
-  'dihydrocitrinone': 'DHC',
-  'roridin a': 'ROR_A',
-  'sterigmatocystin': 'STC',
-  'citrinin': 'CTN',
-  'nivalenol': 'NIV',
+  'aflatoxin b2': 'AFB2',
   'aflatoxin g1': 'AFG1',
-  'mycophenolic acid': 'MPA',
-  'chaetoglobosin a': 'CHA',
-  'verrucarin a': 'VER_A',
-  'enniatin b1': 'ENN_B1',
-  'gliotoxin': 'GLIO',
-  'diacetoxyscirpenol': 'DAS',
-  't-2 toxin': 'T2_TOX',
-  't2 toxin': 'T2_TOX',
-  'patulin': 'PAT',
-  'deoxynivalenol': 'DON',
-  'roridin l2': 'ROR_L2',
-  'roridin l-2': 'ROR_L2',
   'aflatoxin g2': 'AFG2',
   'aflatoxin m1': 'AFM1',
-  'fumonisin b1': 'F_B1',
-  'fumonisins b1': 'F_B1',
-  'verrucarin j': 'VER_J',
-  'zearalenone': 'ZEN',
-  'fumonisin b3': 'F_B3',
-  'fumonisins b3': 'F_B3',
-  'roridin e': 'ROR_E',
-  'satratoxin g': 'SAT_G',
-  'fumonisin b2': 'F_B2',
-  'fumonisins b2': 'F_B2',
   'ochratoxin a': 'OTA',
+  'gliotoxin': 'GLIO',
+  'mycophenolic acid': 'MPA',
+  'sterigmatocystin': 'STC',
+  'zearalenone': 'ZEN',
+  'citrinin': 'CTN',
+  'dihydrocitrinone': 'DHC',
+  'chaetoglobosin a': 'CHA',
+  'enniatin b1': 'ENN_B1',
+  'fumonisins b1': 'F_B1',
+  'fumonisin b1': 'F_B1',
+  'fumonisins b2': 'F_B2',
+  'fumonisin b2': 'F_B2',
+  'fumonisins b3': 'F_B3',
+  'fumonisin b3': 'F_B3',
+  'patulin': 'PAT',
+  'deoxynivalenol': 'DON',
+  'nivalenol': 'NIV',
+  'diacetoxyscirpenol': 'DAS',
+  't-2 toxin': 'T2_TOX',
+  'roridin a': 'ROR_A',
+  'roridin e': 'ROR_E',
+  'roridin l2': 'ROR_L2',
+  'satratoxin g': 'SAT_G',
   'satratoxin h': 'SAT_H',
+  'verrucarin a': 'VER_A',
+  'verrucarin j': 'VER_J',
 
-  // ===== DOM_PARABENS (4 markers) =====
-  'methylparaben': 'M_PARA',
-  'butylparaben': 'B_PARA',
-  'propylparaben': 'P_PARA',
-  'ethylparaben': 'E_PARA',
+  // ==================== HEAVY METALS ====================
+  'aluminum': 'ALU',
+  'antimony': 'ANT',
+  'arsenic': 'ARS',
+  'barium': 'BAR',
+  'beryllium': 'BER',
+  'bismuth': 'BIS',
+  'cadmium': 'CAD',
+  'cesium': 'CES',
+  'gadolinium': 'GAD',
+  'lead': 'LEAD',
+  'mercury': 'MERC',
+  'nickel': 'NICK',
+  'palladium': 'PALL',
+  'platinum': 'PLAT',
+  'tellurium': 'TELL',
+  'thallium': 'THAL',
+  'thorium': 'THOR',
+  'tin': 'TIN',
+  'tungsten': 'TUNG',
+  'uranium': 'URAN',
 
-  // ===== DOM_PESTICIDES (14 markers) =====
-  'dimethyldithiophosphate': 'DMDTP',
-  'glyphosate': 'GLYP',
-  'diethylthiophosphate': 'DETP',
-  'diethyldithiophosphate': 'DEDTP',
-  'diethyl phosphate': 'DEP',
-  '2,4-dichlorophenoxyacetic acid': '2_4_D',
-  '2,4-d': '2_4_D',
-  '2,2-bis(4-chlorophenyl) acetic acid': 'DDA',
-  'dda': 'DDA',
-  '3-phenoxybenzoic acid': '3PBA',
-  '3pba': '3PBA',
-  'atrazine': 'ATRA',
-  'dimethylthiophosphate': 'DMTP',
-  'dimethyl phosphate': 'DMP',
-  'atrazine mercapturate': 'ATRA_M',
-  'perchlorate': 'PERC',
-
-  // ===== DOM_PFAS (22 markers) =====
+  // ==================== PFAS ====================
   'genx': 'GENX',
   'genx/hpfo-da': 'GENX',
-  'genx / hpfo-da': 'GENX',
-  'hpfo-da': 'GENX',
+  '9-chlorohexadecafluoro-3-oxanonane-1-sulfonate': '9CL_PFAS',
+  'dodecafluoro-3h-4,8-dioxanoate': 'NADONA',
+  'nadona': 'NADONA',
+  'perfluoro-[1,2-13c2] octanoic acid': 'M2PFOA',
+  'm2pfoa': 'M2PFOA',
+  'perfluoro-1-[1,2,3,4-13c4] octanesulfonic acid': 'C13_PFOS',
+  'perfluoro-1-heptane sulfonic acid': 'PFHPS',
+  'pfhps': 'PFHPS',
+  'perfluoro-n-[1,2-13c2] decanoic acid': 'MPFDA',
+  'mpfda': 'MPFDA',
+  'perfluoro-n-[1,2-13c2] hexanoic acid': 'C13_PFHXA',
+  'perfluorobutanoic acid': 'PFBA',
+  'pfba': 'PFBA',
+  'perfluorodecanoic acid': 'PFDEA',
+  'pfdea': 'PFDEA',
+  'perfluorododecanoic acid': 'PFDOA',
+  'pfdoa': 'PFDOA',
+  'perfluoroheptanoic acid': 'PFHPA',
+  'pfhpa': 'PFHPA',
+  'perfluorohexane sulfonic acid': 'PFHXS',
+  'pfhxs': 'PFHXS',
+  'perfluorohexanoic acid': 'PFHXA',
+  'pfhxa': 'PFHXA',
+  'perfluorononanoic acid': 'PFNA',
+  'pfna': 'PFNA',
+  'perfluorooctane sulfonic acid': 'PFOS',
+  'pfos': 'PFOS',
   'perfluorooctanoic acid': 'PFOA',
   'pfoa': 'PFOA',
   'perfluoropentanoic acid': 'PFPEA',
   'pfpea': 'PFPEA',
-  '9-chlorohexadecafluoro-3-oxanonane-1-sulfonate': '9CL_P',
-  '9cl-p': '9CL_P',
-  'dodecafluoro-3h-4,8-dioxanoate': 'NADONA',
-  'nadona': 'NADONA',
-  'perfluoro-n-[1,2-13c2] decanoic acid': 'MPFDA',
-  'mpfda': 'MPFDA',
-  'perfluoroundecanoic acid': 'PFUNA',
-  'pfuna': 'PFUNA',
-  'perfluoroheptanoic acid': 'PFHPA',
-  'pfhpa': 'PFHPA',
-  'perfluoro-n-[1,2-13c2] hexanoic acid': 'C13_PFHXA',
-  'perfluorooctane sulfonic acid': 'PFOS',
-  'pfos': 'PFOS',
-  'perfluorohexane sulfonic acid': 'PFHXS',
-  'pfhxs': 'PFHXS',
-  'perfluorotridecanoic acid': 'PFTRDA',
-  'pftrda': 'PFTRDA',
-  'perfluorodecanoic acid': 'PFDEA',
-  'pfdea': 'PFDEA',
   'perfluorotetradecanoic acid': 'PFTEDA',
   'pfteda': 'PFTEDA',
-  'perfluoro-1-heptane sulfonic acid': 'PFHPS',
-  'pfhps': 'PFHPS',
-  'perfluorononanoic acid': 'PFNA',
-  'pfna': 'PFNA',
-  'perfluorododecanoic acid': 'PFDOA',
-  'pfdoa': 'PFDOA',
-  'perfluorobutanoic acid': 'PFBA',
-  'pfba': 'PFBA',
-  'perfluoro-1-[1,2,3,4-13c4] octanesulfonic acid': 'C13_PFOS',
-  'perfluoro-[1,2-13c2] octanoic acid': 'M2PFOA',
-  'm2pfoa': 'M2PFOA',
-  'perfluorohexanoic acid': 'PFHXA',
-  'pfhxa': 'PFHXA',
+  'perfluorotridecanoic acid': 'PFTRDA',
+  'pftrda': 'PFTRDA',
+  'perfluoroundecanoic acid': 'PFUNA',
+  'pfuna': 'PFUNA',
 
-  // ===== DOM_PHTHALATES (4 markers) =====
-  'mono-(2-ethyl-5-oxohexyl) phthalate': 'MEOHP',
-  'meohp': 'MEOHP',
-  'mono-(2-ethyl-5-hydroxyhexyl) phthalate': 'MEHHP',
-  'mehhp': 'MEHHP',
-  'mono-ethyl phthalate': 'METP',
-  'mono ethyl phthalate': 'METP',
-  'metp': 'METP',
-  'mono-2-ethylhexyl phthalate': 'MEHP',
-  'mono 2-ethylhexyl phthalate': 'MEHP',
-  'mehp': 'MEHP',
-
-  // ===== DOM_PLASTICS (4 markers) =====
+  // ==================== ENVIRONMENTAL PHENOLS ====================
   '4-nonylphenol': '4_NON',
   'bisphenol a': 'BPA',
   'bpa': 'BPA',
-  'diphenyl phosphate': 'DPP',
-  'dpp': 'DPP',
   'triclosan': 'TCS',
+  'tcs': 'TCS',
 
-  // ===== DOM_VOC (12 markers) =====
-  '2-methylhippuric acid': '2MHA',
-  '2mha': '2MHA',
-  'n-acetyl (3,4-dihydroxybutyl) cysteine': 'NADC',
-  'n-acetyl-s-(3,4-dihydroxybutyl)-cysteine': 'NADC',
-  'n-acetyl-s-(3,4-dihydroxybutyl)-l-cysteine': 'NADC',
-  'phenylglyoxylic acid': 'PGO',
-  'phenyl glyoxylic acid': 'PGO',
-  'pgo': 'PGO',
-  'n-acetyl (propyl) cysteine': 'NAPR',
-  'n-acetyl-s-(propyl)-cysteine': 'NAPR',
-  'napr': 'NAPR',
-  '3-methylhippuric acid': '3MHA',
-  '3mha': '3MHA',
+  // ==================== HERBICIDES/PESTICIDES ====================
+  '2,4-dichlorophenoxyacetic acid': '2_4_D',
+  '2,4-d': '2_4_D',
+  'atrazine': 'ATRA',
+  'atrazine mercapturate': 'ATRA_M',
+  'glyphosate': 'GLYP',
+  '2,2-bis(4-chlorophenyl) acetic acid': 'DDA',
+  'dda': 'DDA',
+  '3-phenoxybenzoic acid': '3PBA',
+  '3pba': '3PBA',
+  'diethyl phosphate': 'DEP',
+  'dep': 'DEP',
+  'diethyldithiophosphate': 'DEDTP',
+  'dedtp': 'DEDTP',
+  'diethylthiophosphate': 'DETP',
+  'detp': 'DETP',
+  'dimethyl phosphate': 'DMP',
+  'dmp': 'DMP',
+  'dimethyldithiophosphate': 'DMDTP',
+  'dmdtp': 'DMDTP',
+  'dimethylthiophosphate': 'DMTP',
+  'dmtp': 'DMTP',
+
+  // ==================== PARABENS ====================
+  'butylparaben': 'B_PARA',
+  'ethylparaben': 'E_PARA',
+  'methylparaben': 'M_PARA',
+  'propylparaben': 'P_PARA',
+
+  // ==================== PHTHALATES ====================
+  'mono-(2-ethyl-5-hydroxyhexyl) phthalate': 'MEHHP',
+  'mehhp': 'MEHHP',
+  'mono-(2-ethyl-5-oxohexyl) phthalate': 'MEOHP',
+  'meohp': 'MEOHP',
+  'mono-2-ethylhexyl phthalate': 'MEHP',
+  'mehp': 'MEHP',
+  'mono-ethyl phthalate': 'METP',
+  'metp': 'METP',
+
+  // ==================== VOCs ====================
   '2-hydroxyethyl mercapturic acid': '2HEMA',
-  'hema': '2HEMA',
   '2hema': '2HEMA',
-  'n-acetyl phenyl cysteine': 'NAP',
-  'nap': 'NAP',
-  'n-acetyl (2-cyanoethyl) cysteine': 'NACE',
-  'n-acetyl-s-(2-cyanoethyl)-cysteine': 'NACE',
-  'nace': 'NACE',
-  'n-acetyl-s-(2-carbamoylethyl)-cysteine': 'NASC',
-  'n-acetyl (2-carbamoylethyl) cysteine': 'NASC',
-  'n-acetyl-s-(2-carbamoylethyl)-l-cysteine': 'NASC',
+  'hema': '2HEMA',
   '2-hydroxyisobutyric acid': '2HIB',
   '2hib': '2HIB',
+  '2-methylhippuric acid': '2MHA',
+  '2mha': '2MHA',
+  '3-methylhippuric acid': '3MHA',
+  '3mha': '3MHA',
   '4-methylhippuric acid': '4MHA',
   '4mha': '4MHA',
+  'n-acetyl (2-cyanoethyl) cysteine': 'NACE',
+  'nace': 'NACE',
   'n-acetyl (2,hydroxypropyl) cysteine': 'NAHP',
-  'n-acetyl-s-(2-hydroxypropyl)-cysteine': 'NAHP',
   'nahp': 'NAHP',
+  'n-acetyl (3,4-dihydroxybutyl) cysteine': 'NADC',
+  'nadc': 'NADC',
+  'n-acetyl (propyl) cysteine': 'NAPR',
+  'napr': 'NAPR',
+  'n-acetyl phenyl cysteine': 'NAP',
+  'nap': 'NAP',
+  'phenyl glyoxylic acid': 'PGO',
+  'pgo': 'PGO',
 
-  // ===== DOM_METABOLIC_TOXIN (1 marker) =====
+  // ==================== OTHER MARKERS ====================
+  'diphenyl phosphate': 'DPP',
+  'dpp': 'DPP',
+  'n-acetyl-s-(2-carbamoylethyl)-cysteine': 'NASC',
+  'nasc': 'NASC',
+  'perchlorate': 'PERC',
+  'perc': 'PERC',
   'tiglylglycine': 'TG',
+  'tg': 'TG',
 
-  // ===== DOM_OXIDATIVE (16 markers) =====
+  // ==================== OXIDATIVE STRESS BIOMARKERS ====================
+  // Lipid Peroxidation
   '8-iso-prostaglandin f2α': 'ISO_PGF2A',
   '8-iso-prostaglandin f2a': 'ISO_PGF2A',
-  '8-isoprostane': 'ISO_PGF2A',
-  'isoprostane': 'ISO_PGF2A',
-  'iso_pgf2a': 'ISO_PGF2A',
+  '8-isopgf2α': 'ISO_PGF2A',
+  '8-isopgf2a': 'ISO_PGF2A',
+  '11-β-prostaglandin f2α': 'PGF2A_11B',
+  '11-β-prostaglandin f2a': 'PGF2A_11B',
+  '11-beta-prostaglandin f2α': 'PGF2A_11B',
   '11β-prostaglandin f2α': 'PGF2A_11B',
-  '11b-prostaglandin f2a': 'PGF2A_11B',
-  '11-beta-prostaglandin': 'PGF2A_11B',
-  'pgf2a_11b': 'PGF2A_11B',
   '15(r)-prostaglandin f2α': 'PGF2A_15R',
   '15(r)-prostaglandin f2a': 'PGF2A_15R',
-  '15r-prostaglandin': 'PGF2A_15R',
-  'pgf2a_15r': 'PGF2A_15R',
-  'glutathione-s-4-hydroxynonenal': 'GS_HNE',
+  '15r-prostaglandin f2α': 'PGF2A_15R',
+  'glutathione 4-hydroxynonenal': 'GS_HNE',
   'gs-hne': 'GS_HNE',
-  '4-hydroxynonenal': 'GS_HNE',
-  'hydroxynonenal': 'GS_HNE',
-  'gs_hne': 'GS_HNE',
   'malondialdehyde': 'MDA',
   'mda': 'MDA',
+  
+  // DNA Damage
   '8-hydroxy-2-deoxyguanosine': '8OHDG',
-  '8-ohdg': '8OHDG',
   '8ohdg': '8OHDG',
-  '8-hydroxyguanosine': '8OHG',
-  '8-ohg': '8OHG',
+  '8-hydroxyguanine': '8OHG',
   '8ohg': '8OHG',
-  '8-hydroxyguanine sulfate': '8OHGS',
-  '8-ohgs': '8OHGS',
+  '8-hydroxyguanosine': '8OHGS',
   '8ohgs': '8OHGS',
+  
+  // RNA Damage
   '8-nitroguanine': '8NITROG',
-  '8-nitroguanine sulfate': '8NITROGS',
   '8nitrog': '8NITROG',
+  '8-nitroguanosine': '8NITROGS',
   '8nitrogs': '8NITROGS',
+  
+  // Protein Oxidation
   '3-bromotyrosine': '3BTYR',
-  'bromotyrosine': '3BTYR',
   '3btyr': '3BTYR',
   '3-chlorotyrosine': '3CLTYR',
-  'chlorotyrosine': '3CLTYR',
   '3cltyr': '3CLTYR',
   'dityrosine': 'DITYR',
-  'di-tyrosine': 'DITYR',
   'dityr': 'DITYR',
   'nitrotyrosine': 'NITYR',
-  '3-nitrotyrosine': 'NITYR',
   'nityr': 'NITYR',
-  'nε-carboxymethyl-lysine': 'CML',
-  'carboxymethyl-lysine': 'CML',
+  
+  // Advanced Glycation Products
+  'nε-(carboxymethyl)lysine': 'CML',
   'carboxymethyllysine': 'CML',
   'cml': 'CML',
-  'nε-carboxyethyl-lysine': 'CEL',
-  'carboxyethyl-lysine': 'CEL',
+  'nε-carboxyethyllysine': 'CEL',
   'carboxyethyllysine': 'CEL',
   'cel': 'CEL',
 
-  // ===== METHYLATION SERUM =====
-  'homocysteine': 'HCY',
-  'hcy': 'HCY',
-  'vitamin b12': 'VIT_B12',
+  // ==================== METHYLATION SERUM MARKERS ====================
+  'homocysteine': 'HOMOCYSTEINE',
+  'hcy': 'HOMOCYSTEINE',
   'vitamin b12 serum': 'VIT_B12',
+  'vitamin b12': 'VIT_B12',
   'b12': 'VIT_B12',
-  'vit_b12': 'VIT_B12',
-  'folate': 'FOLATE',
   'folate serum': 'FOLATE',
-  'folic acid': 'FOLATE',
+  'folate': 'FOLATE',
+};
+
+// ============================================================================
+// SNP/GENETICS MAPPINGS - Maps rsIDs to gene names for validation
+// ============================================================================
+
+const SNP_GENE_MAP = {
+  // Oxidative Stress SNPs
+  'rs2234694': 'SOD1',
+  'rs4880': 'SOD2',
+  'rs1799895': 'SOD3',
+  'rs8192287': 'SOD3',
+  'rs1001179': 'CAT',
+  'rs4756146': 'CAT',
+  'rs7943316': 'CAT',
+  'rs10911021': 'GLUL',
+  'rs121909307': 'GSS',
+  'rs1050450': 'GPX1',
+  'rs1987628': 'GPX1',
+  'rs2071566': 'GPX2',
+  'rs4902346': 'GPX2',
+  'rs713041': 'GPX4',
+  'rs366631': 'GSTM1',
+  'rs3754446': 'GSTM5',
+  'rs1695': 'GSTP1',
+  'rs2071746': 'HMOX1',
+  'rs4485648': 'TrxR2',
+  'rs7310505': 'TXNRD1',
+  'rs1548357': 'TXNRD2',
+  'rs4673': 'CYBA',
+  'rs9932581': 'CYBA',
+  'rs10789038': 'PRKAA2',
+  'rs2796498': 'PRKAA2',
+  'rs206812': 'XDH',
+  'rs2073316': 'XDH',
+  'rs1048943': 'CYP1A1',
+  'rs916321': 'CYB5R3',
+  'rs20417': 'COX-2',
+  'rs3877899': 'SELENOP',
+  'rs8190955': 'GSR',
   
-  // ===== FALLBACK CATCHES =====
-  '2_carbamoylethyl': 'NASC',
-  '2-carbamoylethyl': 'NASC',
-  'carbamoylethyl': 'NASC',
-  'nasc': 'NASC',
-  '4_chlorophenyl': 'DDA',
-  '4-chlorophenyl': 'DDA',
-  'chlorophenyl': 'DDA',
-  '2_ethyl_5_hydroxyhexyl': 'MEHHP',
-  '2-ethyl-5-hydroxyhexyl': 'MEHHP',
-  'hydroxyhexyl': 'MEHHP',
-  '2_ethyl_5_oxohexyl': 'MEOHP',
-  '2-ethyl-5-oxohexyl': 'MEOHP',
-  'oxohexyl': 'MEOHP',
-  '2_cyanoethyl': 'NACE',
-  '2-cyanoethyl': 'NACE',
-  'cyanoethyl': 'NACE',
-  'nadc': 'NADC',
-  'nadb': 'NADC',
-  '3_4_dihydroxybutyl': 'NADC',
-  '3,4-dihydroxybutyl': 'NADC',
-  'dihydroxybutyl': 'NADC',
-  'propyl': 'NAPR'
+  // Methylation SNPs
+  'rs1801133': 'MTHFR',
+  'rs1801131': 'MTHFR',
+  'rs1801394': 'MTRR',
+  'rs162036': 'MTRR',
+  'rs1805087': 'MTR',
+  'rs3851059': 'MAT1A',
+  'rs1979277': 'SHMT1',
+  'rs10948059': 'GNMT',
+  'rs3733890': 'BHMT',
+  'rs4680': 'COMT',
+  'rs4633': 'COMT',
+  'rs1799983': 'NOS3',
 };
 
-// Genetics field mapping
-const METHYLATION_GENES = [
-  'MTHFR_677', 'MTHFR_1298', 'MTRR_A66G', 'MTRR_K350A', 
-  'MAT1A', 'SHMT1', 'GNMT', 'BHMT', 'MTR', 
-  'COMT_V158M', 'COMT_H62H', 'NOS3'
-];
+// ============================================================================
+// PANEL DETECTION
+// ============================================================================
 
-const OXIDATIVE_GENES = [
-  'SOD1', 'SOD2_1', 'SOD2_2', 'SOD3',
-  'CAT1', 'CAT2', 'CAT3',
-  'GPX1', 'GPX2', 'GPX3', 'GPX4',
-  'GSS', 'HMOX1', 'GSTM1', 'GSTM5', 'GSTP1',
-  'TRXR2', 'CYBA1', 'CYBA2', 'PRKAA2',
-  'XDH1', 'XDH2', 'TXNRD1', 'TXNRD2',
-  'CYP1A1', 'COX2', 'SELENOP', 'GSR', 'CYB5R3', 'GLUL'
-];
+function detectPanelType(markers) {
+  const markerNames = markers.map(m => m.marker_name?.toLowerCase() || '').join(' ');
+  
+  const hasTox = markerNames.includes('aflatoxin') || markerNames.includes('ochratoxin') || 
+                 markerNames.includes('mycotoxin') || markerNames.includes('pfos') ||
+                 markerNames.includes('mercury') || markerNames.includes('arsenic');
+  
+  const hasOxStress = markerNames.includes('prostaglandin') || markerNames.includes('malondialdehyde') ||
+                      markerNames.includes('hydroxyguanine') || markerNames.includes('nitroguanine') ||
+                      markerNames.includes('bromotyrosine') || markerNames.includes('dityrosine');
+  
+  const hasMethylation = markerNames.includes('homocysteine') || markerNames.includes('folate') ||
+                         markerNames.includes('mthfr') || markerNames.includes('comt');
+  
+  if (hasTox) return 'TOX';
+  if (hasOxStress) return 'OX';
+  if (hasMethylation) return 'METH';
+  return 'VIB';
+}
 
-const METHYLATION_GENE_WEIGHTS = {
-  'MTHFR_677': 1.5, 'MTHFR_1298': 1.5,
-  'COMT_V158M': 1.0, 'COMT_H62H': 1.0,
-  'MTRR_A66G': 1.0, 'MTRR_K350A': 1.0,
-  'MTR': 1.5, 'MAT1A': 1.5, 'SHMT1': 1.5,
-  'BHMT': 1.0, 'GNMT': 1.0, 'NOS3': 1.0
-};
-
-const OXIDATIVE_GENE_WEIGHTS = {
-  'GPX1': 0.625, 'GPX2': 0.625, 'GPX3': 0.625, 'GPX4': 0.625,
-  'GSTM1': 0.833, 'GSTM5': 0.833, 'GSTP1': 0.833,
-  'SOD1': 0.5, 'SOD2_1': 0.5, 'SOD2_2': 0.5, 'SOD3': 0.5,
-  'CYBA1': 1.0, 'CYBA2': 1.0,
-  'TRXR2': 0.5, 'TXNRD1': 0.5, 'TXNRD2': 0.5,
-  'XDH1': 0.75, 'XDH2': 0.75,
-  'CAT1': 0.5, 'CAT2': 0.5, 'CAT3': 0.5,
-  'GSS': 1.0, 'HMOX1': 1.0, 'PRKAA2': 1.0,
-  'CYP1A1': 1.0, 'COX2': 1.0, 'SELENOP': 1.0,
-  'GSR': 1.0, 'CYB5R3': 1.0, 'GLUL': 1.0
-};
+// ============================================================================
+// MARKER NORMALIZATION
+// ============================================================================
 
 function normalizeMarkerName(rawName) {
   if (!rawName) return 'UNKNOWN';
   
   let cleaned = rawName.toLowerCase().trim();
-  const parenMatch = rawName.match(/\(([A-Z0-9_-]+)\)/i);
-  const abbrevInParen = parenMatch ? parenMatch[1].toUpperCase() : null;
   
+  // Remove units and parenthetical content for matching
   cleaned = cleaned.replace(/\s*\([^)]*\)\s*/g, ' ').trim();
+  cleaned = cleaned.replace(/\s*(ug\/g|ng\/g|µmol\/l|pg\/ml|ng\/ml)\s*/gi, '').trim();
+  cleaned = cleaned.replace(/\s+/g, ' ');
   
+  // Direct lookup
   if (MARKER_MAP[cleaned]) {
     return MARKER_MAP[cleaned];
   }
   
-  if (abbrevInParen) {
-    const abbrevLower = abbrevInParen.toLowerCase();
-    if (MARKER_MAP[abbrevLower]) {
-      return MARKER_MAP[abbrevLower];
-    }
-    const validIds = new Set(Object.values(MARKER_MAP));
-    if (validIds.has(abbrevInParen)) {
-      return abbrevInParen;
-    }
-    if (validIds.has(abbrevInParen.replace(/-/g, '_'))) {
-      return abbrevInParen.replace(/-/g, '_');
-    }
+  // Try without special characters
+  const alphaOnly = cleaned.replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
+  if (MARKER_MAP[alphaOnly]) {
+    return MARKER_MAP[alphaOnly];
   }
   
-  // Pattern matching for partial names
-  if (cleaned.includes('isoprostane') || cleaned.includes('8-iso')) return 'ISO_PGF2A';
-  if (cleaned.includes('11β') || cleaned.includes('11b') || cleaned.includes('11-beta')) return 'PGF2A_11B';
-  if (cleaned.includes('15(r)') || cleaned.includes('15r')) return 'PGF2A_15R';
-  if (cleaned.includes('hydroxynonenal') || cleaned.includes('gs-hne') || cleaned.includes('4-hne')) return 'GS_HNE';
-  if (cleaned.includes('malondialdehyde') || cleaned === 'mda') return 'MDA';
-  if (cleaned.includes('8-hydroxy-2-deoxy') || cleaned.includes('8-ohdg') || cleaned === '8ohdg') return '8OHDG';
-  if (cleaned.includes('bromotyrosine')) return '3BTYR';
-  if (cleaned.includes('chlorotyrosine')) return '3CLTYR';
-  if (cleaned.includes('dityrosine')) return 'DITYR';
-  if (cleaned.includes('nitrotyrosine')) return 'NITYR';
-  if (cleaned.includes('carboxymethyl') && cleaned.includes('lysine')) return 'CML';
-  if (cleaned.includes('carboxyethyl') && cleaned.includes('lysine')) return 'CEL';
-  if (cleaned.includes('carbamoylethyl') || cleaned.includes('carbamoyl') || cleaned.includes('2-carbamoyl')) return 'NASC';
-  if (cleaned.includes('dihydroxybutyl') || cleaned.includes('3,4-dihydroxy') || cleaned === 'nadc' || cleaned === 'nadb') return 'NADC';
-  if (cleaned.includes('cyanoethyl') || cleaned.includes('2-cyano')) return 'NACE';
-  if (cleaned.includes('hydroxypropyl') || cleaned.includes('2-hydroxypropyl') || cleaned.includes('2,hydroxypropyl')) return 'NAHP';
-  if (cleaned === 'propyl' || (cleaned.includes('propyl') && cleaned.includes('acetyl') && !cleaned.includes('hydroxy'))) return 'NAPR';
-  if ((cleaned.includes('phenyl') && cleaned.includes('acetyl') && !cleaned.includes('glyoxylic')) || cleaned === 'nap') return 'NAP';
-  if (cleaned.includes('2-ethyl-5-hydroxyhexyl') || cleaned.includes('hydroxyhexyl')) return 'MEHHP';
-  if (cleaned.includes('2-ethyl-5-oxohexyl') || cleaned.includes('oxohexyl')) return 'MEOHP';
-  if (cleaned.includes('4-chlorophenyl') || cleaned.includes('chlorophenyl') || cleaned.includes('bis(4-chlorophenyl)')) return 'DDA';
-  
-  if (cleaned.includes('n-acetyl') || cleaned.includes('acetyl')) {
-    if (cleaned.includes('carbamoylethyl') || cleaned.includes('carbamoyl')) return 'NASC';
-    if (cleaned.includes('dihydroxybutyl') || cleaned.includes('3,4-dihydroxy')) return 'NADC';
-    if (cleaned.includes('cyanoethyl') || cleaned.includes('2-cyano')) return 'NACE';
-    if (cleaned.includes('hydroxypropyl')) return 'NAHP';
-    if (cleaned.includes('phenyl') && !cleaned.includes('glyoxylic')) return 'NAP';
-    if (cleaned.includes('propyl') && !cleaned.includes('hydroxy')) return 'NAPR';
-  }
-  
+  // Partial match - check if any key is contained in the name
   for (const [key, value] of Object.entries(MARKER_MAP)) {
-    if (cleaned.includes(key) && key.length > 3) {
+    if (cleaned.includes(key) && key.length > 4) {
       return value;
     }
   }
   
-  if (abbrevInParen) {
-    return abbrevInParen.replace(/-/g, '_');
-  }
+  // Special handling for prostaglandins (commonly truncated)
+  if (cleaned.includes('11') && cleaned.includes('prostaglandin')) return 'PGF2A_11B';
+  if (cleaned.includes('15') && cleaned.includes('prostaglandin')) return 'PGF2A_15R';
+  if (cleaned.includes('iso') && cleaned.includes('prostaglandin')) return 'ISO_PGF2A';
+  
+  // Special handling for oxidative markers
+  if (cleaned.includes('carboxymethyl') && cleaned.includes('lysine')) return 'CML';
+  if (cleaned.includes('carboxyethyl') && cleaned.includes('lysine')) return 'CEL';
+  if (cleaned.includes('hydroxyguanosine')) return '8OHGS';
+  if (cleaned.includes('nitroguanosine')) return '8NITROGS';
   
   console.log('[Vibrant Parser] Unmapped marker:', rawName);
-  const words = rawName.replace(/[^a-zA-Z\s]/g, ' ').split(/\s+/).filter(w => w.length > 0);
+  
+  // Generate a reasonable abbreviation as fallback
+  const words = rawName.replace(/[^a-zA-Z0-9\s]/g, ' ').split(/\s+/).filter(w => w.length > 0);
   return words.map(w => w[0]).join('').toUpperCase().substring(0, 8) || 'UNK';
 }
 
-// Detect panel type from markers for result_id prefix
-function detectPanelType(markers) {
-  const markerNames = markers.map(m => (m.marker_name || '').toLowerCase()).join(' ');
+// ============================================================================
+// JSON REPAIR UTILITIES
+// ============================================================================
+
+function repairJSON(jsonString) {
+  let cleaned = jsonString.trim();
   
-  if (markerNames.includes('8-ohdg') || markerNames.includes('malondialdehyde') || 
-      markerNames.includes('isoprostag') || markerNames.includes('nitrotyrosine') ||
-      markerNames.includes('dityrosine') || markerNames.includes('bromotyrosine')) {
-    return 'OX';
+  // Remove markdown code blocks
+  cleaned = cleaned.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/i, '');
+  
+  // Try to extract JSON object/array
+  const jsonMatch = cleaned.match(/(\{[\s\S]*\}|\[[\s\S]*\])/);
+  if (jsonMatch) {
+    cleaned = jsonMatch[1];
   }
-  if (markerNames.includes('homocysteine') && (markerNames.includes('folate') || markerNames.includes('b12'))) {
-    return 'METH';
-  }
-  if (markerNames.includes('ochratoxin') || markerNames.includes('aflatoxin') || 
-      markerNames.includes('pfos') || markerNames.includes('pfoa') || 
-      markerNames.includes('glyphosate') || markerNames.includes('mercury') ||
-      markerNames.includes('arsenic') || markerNames.includes('lead')) {
-    return 'TOX';
-  }
-  return 'VIB';
+  
+  // Fix common issues
+  cleaned = cleaned
+    .replace(/,\s*}/g, '}')  // trailing commas in objects
+    .replace(/,\s*]/g, ']')  // trailing commas in arrays
+    .replace(/'/g, '"')       // single quotes to double
+    .replace(/(\w+)(?=\s*:)/g, '"$1"') // unquoted keys
+    .replace(/:\s*'([^']*)'/g, ': "$1"'); // single-quoted values
+  
+  return cleaned;
 }
 
-// JSON repair logic for malformed responses
 function tryParseJSON(text) {
+  // Strategy 1: Direct parse
   try {
     return JSON.parse(text);
-  } catch (e) {
-    console.log('[Vibrant Parser] Direct parse failed, attempting repair...');
-  }
-
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  if (jsonMatch) {
-    let jsonStr = jsonMatch[0];
-    jsonStr = jsonStr.replace(/,(\s*[}\]])/g, '$1');
-    
-    try {
-      return JSON.parse(jsonStr);
-    } catch (e2) {
-      console.log('[Vibrant Parser] Repair attempt 1 failed:', e2.message);
-    }
-
-    // Extract marker objects individually
-    try {
-      const markerObjects = [];
-      const markerRegex = /\{[^{}]*"marker_name"[^{}]*\}/g;
-      let match;
-      while ((match = markerRegex.exec(jsonStr)) !== null) {
-        try {
-          const obj = JSON.parse(match[0]);
-          markerObjects.push(obj);
-        } catch (e) {}
-      }
-      
-      if (markerObjects.length > 0) {
-        const panelsMatch = jsonStr.match(/"panels_detected"\s*:\s*\[(.*?)\]/);
-        let panels = [];
-        if (panelsMatch) {
-          try {
-            panels = JSON.parse('[' + panelsMatch[1] + ']');
-          } catch (e) {}
-        }
-        
-        // Extract genetics
-        let genetics = { methylation: [], oxidative: [] };
-        const methylationMatch = jsonStr.match(/"methylation"\s*:\s*\[([\s\S]*?)\]/);
-        const oxidativeMatch = jsonStr.match(/"oxidative"\s*:\s*\[([\s\S]*?)\]/);
-        
-        if (methylationMatch) {
-          const geneRegex = /\{[^{}]*"gene"[^{}]*\}/g;
-          let gMatch;
-          while ((gMatch = geneRegex.exec(methylationMatch[1])) !== null) {
-            try { genetics.methylation.push(JSON.parse(gMatch[0])); } catch (e) {}
-          }
-        }
-        if (oxidativeMatch) {
-          const geneRegex = /\{[^{}]*"gene"[^{}]*\}/g;
-          let gMatch;
-          while ((gMatch = geneRegex.exec(oxidativeMatch[1])) !== null) {
-            try { genetics.oxidative.push(JSON.parse(gMatch[0])); } catch (e) {}
-          }
-        }
-        
-        return {
-          panels_detected: panels,
-          markers: markerObjects,
-          genetics: genetics
-        };
-      }
-    } catch (e3) {
-      console.log('[Vibrant Parser] Repair attempt 2 failed:', e3.message);
+  } catch (e) {}
+  
+  // Strategy 2: Repair and parse
+  try {
+    return JSON.parse(repairJSON(text));
+  } catch (e) {}
+  
+  // Strategy 3: Extract JSON from text
+  const patterns = [
+    /\{[\s\S]*"report_id"[\s\S]*\}/,
+    /\{[\s\S]*"markers"[\s\S]*\}/,
+    /\[[\s\S]*\{[\s\S]*"marker_name"[\s\S]*\}[\s\S]*\]/
+  ];
+  
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match) {
+      try {
+        return JSON.parse(repairJSON(match[0]));
+      } catch (e) {}
     }
   }
-
+  
   return null;
 }
 
-function calculateGeneticScores(genetics) {
-  const riskPoints = {
-    'Normal': 0,
-    'Heterozygous': 1,
-    'Homozygous_Mutant': 2,
-    'Partially_Elevated': 1,
-    'Elevated': 2
-  };
+// ============================================================================
+// MAIN HANDLER
+// ============================================================================
 
-  let methylationWeightedScore = 0;
-  let methylationMaxScore = 0;
+exports.handler = async function (event) {
+  console.log('[Vibrant Parser] Function started');
   
-  if (genetics.methylation && genetics.methylation.length > 0) {
-    for (const snp of genetics.methylation) {
-      const weight = METHYLATION_GENE_WEIGHTS[snp.gene] || 1.0;
-      const points = riskPoints[snp.risk] || 0;
-      methylationWeightedScore += points * weight;
-      methylationMaxScore += 2 * weight;
-    }
-  }
-  
-  const methylationRiskScore = methylationMaxScore > 0 
-    ? Math.round((methylationWeightedScore / methylationMaxScore) * 100) 
-    : null;
-
-  let oxidativeWeightedScore = 0;
-  let oxidativeMaxScore = 0;
-  
-  if (genetics.oxidative && genetics.oxidative.length > 0) {
-    for (const snp of genetics.oxidative) {
-      const weight = OXIDATIVE_GENE_WEIGHTS[snp.gene] || 1.0;
-      const points = riskPoints[snp.risk] || 0;
-      oxidativeWeightedScore += points * weight;
-      oxidativeMaxScore += 2 * weight;
-    }
-  }
-  
-  const oxidativeRiskScore = oxidativeMaxScore > 0 
-    ? Math.round((oxidativeWeightedScore / oxidativeMaxScore) * 100) 
-    : null;
-
-  let combinedScore = null;
-  if (methylationRiskScore !== null && oxidativeRiskScore !== null) {
-    combinedScore = Math.round((methylationRiskScore + oxidativeRiskScore) / 2);
-  } else if (methylationRiskScore !== null) {
-    combinedScore = methylationRiskScore;
-  } else if (oxidativeRiskScore !== null) {
-    combinedScore = oxidativeRiskScore;
-  }
-
-  const detoxCapacityMultiplier = combinedScore !== null 
-    ? Math.round((1 + (combinedScore / 100) * 0.3) * 100) / 100
-    : 1.0;
-
-  return {
-    methylation_risk_score: methylationRiskScore,
-    oxidative_risk_score: oxidativeRiskScore,
-    combined_genetic_score: combinedScore,
-    detox_capacity_multiplier: detoxCapacityMultiplier
-  };
-}
-
-function formatGeneticsForAirtable(genetics, reportId, patientId, panelType) {
-  const record = {
-    genetics_id: `GEN-${reportId}`,
-    patient_id: patientId,
-    report_id: reportId,
-    panel_type: panelType
-  };
-
-  if (genetics.methylation) {
-    for (const snp of genetics.methylation) {
-      if (METHYLATION_GENES.includes(snp.gene)) {
-        record[snp.gene] = snp.risk;
-      }
-    }
-  }
-
-  if (genetics.oxidative) {
-    for (const snp of genetics.oxidative) {
-      if (OXIDATIVE_GENES.includes(snp.gene)) {
-        record[snp.gene] = snp.risk;
-      }
-    }
-  }
-
-  const scores = calculateGeneticScores(genetics);
-  Object.assign(record, scores);
-
-  return record;
-}
-
-exports.handler = async (event) => {
-  const headers = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type',
-    'Content-Type': 'application/json'
-  };
-
+  // Handle CORS preflight
   if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 200, headers, body: '' };
+    return {
+      statusCode: 200,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      },
+      body: '',
+    };
   }
 
   if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method not allowed' }) };
+    return {
+      statusCode: 405,
+      headers: { 'Access-Control-Allow-Origin': '*' },
+      body: JSON.stringify({ error: 'Method not allowed' }),
+    };
   }
 
   try {
     const body = JSON.parse(event.body);
-    const { pdfBase64, patientId, reportId } = body;
+    const pdfBase64 = body.pdf;
+    const patientId = body.patient_id || '';
 
     if (!pdfBase64) {
-      return { statusCode: 400, headers, body: JSON.stringify({ error: 'No PDF data provided' }) };
+      return {
+        statusCode: 400,
+        headers: { 'Access-Control-Allow-Origin': '*' },
+        body: JSON.stringify({ error: 'No PDF data provided' }),
+      };
     }
 
-    console.log('[Vibrant Parser] Processing PDF for patient:', patientId, 'report:', reportId);
+    console.log(`[Vibrant Parser] Processing PDF for patient: ${patientId || '(no ID)'}`);
 
-    const extractionPrompt = `Extract ALL test results from this Vibrant Wellness lab report PDF.
+    const client = new Anthropic();
 
-STEP 1: Identify which panels are present:
-- Total Tox Panel (Heavy Metals, Mycotoxins, Environmental Toxins)
-- PFAS Panel
-- Methylation Panel (includes genetics AND serum markers)
-- Oxidative Stress Panel (includes genetics AND biomarkers)
+    // ========================================================================
+    // EXTRACTION PROMPT - Handles biomarkers AND genetics
+    // ========================================================================
+    
+    const prompt = `You are extracting lab results from a Vibrant Wellness PDF report. Extract ALL data accurately.
 
-STEP 2: For each BIOMARKER/TEST RESULT, extract:
-- marker_name: The COMPLETE name as shown
-- value: Numeric result only (if "<LOD" or "ND" or "Not Detected", use 0)
+IMPORTANT: This PDF may contain:
+1. BIOMARKERS - Test results with numeric values (e.g., "Arsenic: 4.61 ug/g")
+2. GENETICS/SNPs - Genetic variants with rsIDs (e.g., "rs1801133 MTHFR C/C Normal")
 
-STEP 3: For GENETICS (SNPs from Methylation and/or Oxidative panels), extract:
-- gene: Gene name standardized
-- rsid: rs number if shown
-- genotype: The allele result
-- risk: Risk level - use exactly: "Normal", "Heterozygous", "Homozygous_Mutant" for methylation; "Normal", "Partially_Elevated", "Elevated" for oxidative
+Return a JSON object with this EXACT structure:
 
-Return ONLY valid JSON (no markdown, no explanations):
 {
-  "panels_detected": ["Total_Tox", "PFAS", "Methylation", "Oxidative_Stress"],
+  "report_id": "the accession ID number from the PDF header",
+  "panel_type": "TOX" or "OX" or "METH" based on content,
   "markers": [
-    {"marker_name": "Arsenic", "value": 12.5},
-    {"marker_name": "8-Hydroxy-2-deoxyguanosine", "value": 2.8}
+    {
+      "marker_name": "exact marker name from PDF",
+      "value": numeric value (use 0 for "<LOD" or undetectable),
+      "units": "units if shown",
+      "reference": "reference range if shown"
+    }
   ],
-  "genetics": {
-    "methylation": [
-      {"gene": "MTHFR_677", "rsid": "rs1801133", "genotype": "C/C", "risk": "Normal"}
-    ],
-    "oxidative": [
-      {"gene": "GPX4", "rsid": "rs713041", "genotype": "T/T", "risk": "Elevated"}
-    ]
-  }
+  "genetics": [
+    {
+      "rsid": "rs1801133",
+      "gene": "MTHFR",
+      "mutation": "C/C",
+      "risk": "Normal" or "Elevated" or "Partially elevated",
+      "reference": "reference genotype"
+    }
+  ]
 }
 
-CRITICAL:
-- Return ONLY the JSON object
-- Extract ALL markers from ALL pages
-- Include BOTH normal AND elevated results
-- For "<LOD" values, use 0
-- Gene name mappings: MTHFR C677T→MTHFR_677, MTHFR A1298C→MTHFR_1298, SOD2 rs4880→SOD2_1
-- If no genetics, use empty arrays: {"methylation": [], "oxidative": []}`;
+EXTRACTION RULES:
+1. For BIOMARKERS: Extract the Current value, not Previous. Use 0 for "<" values.
+2. For GENETICS: Look for tables with "Test Name", "Gene Name", "Your Mutation", "Your Risk"
+   - The rsID looks like "rs" followed by numbers (e.g., rs1801133)
+   - Extract ALL SNPs from Antioxidant Genetics or Methylation sections
+3. The report_id is the "Accession ID" from the header (10-digit number)
+4. Return ONLY valid JSON, no markdown code blocks
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 16000,
-        messages: [{
+Extract all biomarkers and ALL genetics/SNPs from this PDF:`;
+
+    const response = await client.messages.create({
+      model: 'claude-sonnet-4-20250514',  // Using Sonnet for accuracy
+      max_tokens: 16000,
+      messages: [
+        {
           role: 'user',
           content: [
             {
@@ -660,125 +532,124 @@ CRITICAL:
               source: {
                 type: 'base64',
                 media_type: 'application/pdf',
-                data: pdfBase64
-              }
+                data: pdfBase64,
+              },
             },
             {
               type: 'text',
-              text: extractionPrompt
-            }
-          ]
-        }]
-      })
+              text: prompt,
+            },
+          ],
+        },
+      ],
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('[Vibrant Parser] Claude API error:', response.status, errorText);
-      return { statusCode: 500, headers, body: JSON.stringify({ error: 'Claude API failed', details: errorText }) };
-    }
+    const responseText = response.content[0].text;
+    console.log('[Vibrant Parser] Response length:', responseText.length);
 
-    const data = await response.json();
-    let extractedText = data.content[0].text;
-    
-    console.log('[Vibrant Parser] Response length:', extractedText.length);
-    
-    extractedText = extractedText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-    
-    const parsed = tryParseJSON(extractedText);
+    // Parse the response
+    const parsed = tryParseJSON(responseText);
     
     if (!parsed) {
-      console.error('[Vibrant Parser] All JSON parse attempts failed');
-      console.error('[Vibrant Parser] Raw response preview:', extractedText.substring(0, 1000));
-      return { 
-        statusCode: 500, 
-        headers, 
+      console.error('[Vibrant Parser] Failed to parse response');
+      console.log('[Vibrant Parser] Raw response:', responseText.substring(0, 500));
+      return {
+        statusCode: 500,
+        headers: { 'Access-Control-Allow-Origin': '*' },
         body: JSON.stringify({ 
-          error: 'Failed to parse Claude response', 
-          raw_start: extractedText.substring(0, 500),
-          raw_end: extractedText.substring(extractedText.length - 500)
-        }) 
+          error: 'Failed to parse Claude response',
+          raw: responseText.substring(0, 1000)
+        }),
       };
     }
 
-    const finalReportId = reportId || `RPT-${Date.now()}`;
-    const panelType = detectPanelType(parsed.markers || []);
-    
-    console.log('[Vibrant Parser] Report ID:', finalReportId);
-    console.log('[Vibrant Parser] Panel type:', panelType);
-    console.log('[Vibrant Parser] Panels detected:', parsed.panels_detected || []);
-    console.log('[Vibrant Parser] Extracted', parsed.markers?.length || 0, 'markers');
+    const reportId = parsed.report_id || 'UNKNOWN';
+    const markers = parsed.markers || [];
+    const genetics = parsed.genetics || [];
+    const panelType = parsed.panel_type || detectPanelType(markers);
 
-    const SKIP_MARKERS = new Set([
-      'urine creatinine', 'urinary creatinine', 'creatinine', 'uc',
-      'specific gravity', 'sg', 'ph', 'urine ph'
-    ]);
+    console.log(`[Vibrant Parser] Report ID: ${reportId}`);
+    console.log(`[Vibrant Parser] Panel type: ${panelType}`);
+    console.log(`[Vibrant Parser] Extracted ${markers.length} biomarkers`);
+    console.log(`[Vibrant Parser] Extracted ${genetics.length} SNPs`);
+
+    // ========================================================================
+    // PROCESS BIOMARKERS
+    // ========================================================================
     
-    // Format markers with panel type prefix to avoid duplicate result_ids
-    const airtableRecords = (parsed.markers || [])
-      .filter(marker => {
-        const name = marker.marker_name.toLowerCase().trim();
-        return !SKIP_MARKERS.has(name);
-      })
-      .map((marker, index) => {
-        const markerId = normalizeMarkerName(marker.marker_name);
-        return {
-          result_id: `${finalReportId}-${panelType}-${String(index + 1).padStart(3, '0')}`,
-          report_id: finalReportId,
-          patient_id: patientId || '',
-          marker_id_inbox: markerId,
-          value: parseFloat(marker.value) || 0
-        };
+    const results = [];
+    let idx = 1;
+
+    for (const marker of markers) {
+      const markerId = normalizeMarkerName(marker.marker_name);
+      const value = typeof marker.value === 'number' ? marker.value : 
+                    parseFloat(String(marker.value).replace(/[<>]/g, '')) || 0;
+
+      results.push({
+        result_id: `${reportId}-${panelType}-${String(idx).padStart(3, '0')}`,
+        report_id: reportId,
+        patient_id: patientId,
+        marker_id_inbox: markerId,
+        value: value,
+        marker_type: 'biomarker'
       });
-
-    const hasMethodylation = parsed.genetics?.methylation?.length > 0;
-    const hasOxidative = parsed.genetics?.oxidative?.length > 0;
-    let geneticsPanelType = 'None';
-    if (hasMethodylation && hasOxidative) {
-      geneticsPanelType = 'Both';
-    } else if (hasMethodylation) {
-      geneticsPanelType = 'Methylation';
-    } else if (hasOxidative) {
-      geneticsPanelType = 'Oxidative_Stress';
+      idx++;
     }
 
-    let geneticsRecord = null;
-    if (geneticsPanelType !== 'None') {
-      geneticsRecord = formatGeneticsForAirtable(
-        parsed.genetics,
-        finalReportId,
-        patientId || '',
-        geneticsPanelType
-      );
+    // ========================================================================
+    // PROCESS GENETICS/SNPs
+    // ========================================================================
+    
+    let snpIdx = 1;
+    for (const snp of genetics) {
+      const rsid = snp.rsid || snp.test_name || '';
+      const gene = snp.gene || snp.gene_name || SNP_GENE_MAP[rsid] || '';
+      const mutation = snp.mutation || snp.your_mutation || '';
+      const risk = snp.risk || snp.your_risk || '';
+      
+      if (rsid && rsid.startsWith('rs')) {
+        results.push({
+          result_id: `${reportId}-${panelType}-SNP-${String(snpIdx).padStart(3, '0')}`,
+          report_id: reportId,
+          patient_id: patientId,
+          marker_id_inbox: rsid,
+          value: mutation,
+          gene_name: gene,
+          risk_level: risk,
+          marker_type: 'snp'
+        });
+        snpIdx++;
+      }
     }
+
+    console.log(`[Vibrant Parser] Total results: ${results.length}`);
 
     return {
       statusCode: 200,
-      headers,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Content-Type': 'application/json',
+      },
       body: JSON.stringify({
         success: true,
-        report_id: finalReportId,
-        patient_id: patientId || '',
+        report_id: reportId,
         panel_type: panelType,
-        panels_detected: parsed.panels_detected || [],
-        marker_count: airtableRecords.length,
-        results: airtableRecords,
-        has_genetics: geneticsPanelType !== 'None',
-        genetics_panel_type: geneticsPanelType,
-        genetics: geneticsRecord,
-        genetics_raw: {
-          methylation_snps: parsed.genetics?.methylation || [],
-          oxidative_snps: parsed.genetics?.oxidative || []
-        }
-      })
+        biomarker_count: markers.length,
+        snp_count: genetics.length,
+        total_count: results.length,
+        results: results,
+      }),
     };
 
   } catch (error) {
     console.error('[Vibrant Parser] Error:', error);
     return {
       statusCode: 500,
-      headers,
-      body: JSON.stringify({ error: 'Server error', details: error.message })
+      headers: { 'Access-Control-Allow-Origin': '*' },
+      body: JSON.stringify({
+        error: 'Parser failed',
+        message: error.message,
+      }),
     };
   }
 };
