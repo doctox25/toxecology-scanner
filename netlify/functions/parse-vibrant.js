@@ -1,5 +1,6 @@
-// parse-vibrant.js - Vibrant Wellness PDF Parser v3.0
+// parse-vibrant.js - Vibrant Wellness PDF Parser v3.1
 // Handles: Total Tox, Oxidative Stress (biomarkers + genetics), Methylation (biomarkers + genetics)
+// Using Haiku for speed (Pro plan 26s timeout limit)
 
 const Anthropic = require("@anthropic-ai/sdk").default;
 
@@ -192,21 +193,26 @@ const MARKER_MAP = {
   '8-iso-prostaglandin f2a': 'ISO_PGF2A',
   '8-isopgf2α': 'ISO_PGF2A',
   '8-isopgf2a': 'ISO_PGF2A',
+  'iso-prostaglandin': 'ISO_PGF2A',
   '11-β-prostaglandin f2α': 'PGF2A_11B',
   '11-β-prostaglandin f2a': 'PGF2A_11B',
   '11-beta-prostaglandin f2α': 'PGF2A_11B',
   '11β-prostaglandin f2α': 'PGF2A_11B',
+  '11-beta-prostaglandin': 'PGF2A_11B',
   '15(r)-prostaglandin f2α': 'PGF2A_15R',
   '15(r)-prostaglandin f2a': 'PGF2A_15R',
   '15r-prostaglandin f2α': 'PGF2A_15R',
+  '15-r-prostaglandin': 'PGF2A_15R',
   'glutathione 4-hydroxynonenal': 'GS_HNE',
   'gs-hne': 'GS_HNE',
+  'glutathione-hne': 'GS_HNE',
   'malondialdehyde': 'MDA',
   'mda': 'MDA',
   
   // DNA Damage
   '8-hydroxy-2-deoxyguanosine': '8OHDG',
   '8ohdg': '8OHDG',
+  '8-hydroxy-2\'-deoxyguanosine': '8OHDG',
   '8-hydroxyguanine': '8OHG',
   '8ohg': '8OHG',
   '8-hydroxyguanosine': '8OHGS',
@@ -221,8 +227,10 @@ const MARKER_MAP = {
   // Protein Oxidation
   '3-bromotyrosine': '3BTYR',
   '3btyr': '3BTYR',
+  'bromotyrosine': '3BTYR',
   '3-chlorotyrosine': '3CLTYR',
   '3cltyr': '3CLTYR',
+  'chlorotyrosine': '3CLTYR',
   'dityrosine': 'DITYR',
   'dityr': 'DITYR',
   'nitrotyrosine': 'NITYR',
@@ -230,10 +238,14 @@ const MARKER_MAP = {
   
   // Advanced Glycation Products
   'nε-(carboxymethyl)lysine': 'CML',
+  'n-epsilon-(carboxymethyl)lysine': 'CML',
   'carboxymethyllysine': 'CML',
+  'carboxymethyl lysine': 'CML',
   'cml': 'CML',
   'nε-carboxyethyllysine': 'CEL',
+  'n-epsilon-carboxyethyllysine': 'CEL',
   'carboxyethyllysine': 'CEL',
+  'carboxyethyl lysine': 'CEL',
   'cel': 'CEL',
 
   // ==================== METHYLATION SERUM MARKERS ====================
@@ -242,8 +254,10 @@ const MARKER_MAP = {
   'vitamin b12 serum': 'VIT_B12',
   'vitamin b12': 'VIT_B12',
   'b12': 'VIT_B12',
+  'b12 serum': 'VIT_B12',
   'folate serum': 'FOLATE',
   'folate': 'FOLATE',
+  'folic acid': 'FOLATE',
 };
 
 // ============================================================================
@@ -357,15 +371,17 @@ function normalizeMarkerName(rawName) {
   }
   
   // Special handling for prostaglandins (commonly truncated)
-  if (cleaned.includes('11') && cleaned.includes('prostaglandin')) return 'PGF2A_11B';
-  if (cleaned.includes('15') && cleaned.includes('prostaglandin')) return 'PGF2A_15R';
-  if (cleaned.includes('iso') && cleaned.includes('prostaglandin')) return 'ISO_PGF2A';
+  if (cleaned.includes('11') && (cleaned.includes('prostaglandin') || cleaned.includes('pgf'))) return 'PGF2A_11B';
+  if (cleaned.includes('15') && (cleaned.includes('prostaglandin') || cleaned.includes('pgf'))) return 'PGF2A_15R';
+  if (cleaned.includes('iso') && (cleaned.includes('prostaglandin') || cleaned.includes('pgf'))) return 'ISO_PGF2A';
+  if (cleaned.includes('8-iso')) return 'ISO_PGF2A';
   
   // Special handling for oxidative markers
   if (cleaned.includes('carboxymethyl') && cleaned.includes('lysine')) return 'CML';
   if (cleaned.includes('carboxyethyl') && cleaned.includes('lysine')) return 'CEL';
   if (cleaned.includes('hydroxyguanosine')) return '8OHGS';
   if (cleaned.includes('nitroguanosine')) return '8NITROGS';
+  if (cleaned.includes('deoxyguanosine')) return '8OHDG';
   
   console.log('[Vibrant Parser] Unmapped marker:', rawName);
   
@@ -480,48 +496,32 @@ exports.handler = async function (event) {
     // EXTRACTION PROMPT - Handles biomarkers AND genetics
     // ========================================================================
     
-    const prompt = `You are extracting lab results from a Vibrant Wellness PDF report. Extract ALL data accurately.
+    const prompt = `Extract ALL lab results from this Vibrant Wellness PDF. Return ONLY valid JSON.
 
-IMPORTANT: This PDF may contain:
-1. BIOMARKERS - Test results with numeric values (e.g., "Arsenic: 4.61 ug/g")
-2. GENETICS/SNPs - Genetic variants with rsIDs (e.g., "rs1801133 MTHFR C/C Normal")
+The PDF contains:
+1. BIOMARKERS - numeric test results (e.g., "Arsenic: 4.61")  
+2. GENETICS/SNPs - genetic variants (e.g., "rs1801133 MTHFR C/C Normal")
 
-Return a JSON object with this EXACT structure:
+Return this EXACT JSON structure:
 
 {
-  "report_id": "the accession ID number from the PDF header",
-  "panel_type": "TOX" or "OX" or "METH" based on content,
+  "report_id": "10-digit accession ID from header",
+  "panel_type": "TOX" or "OX" or "METH",
   "markers": [
-    {
-      "marker_name": "exact marker name from PDF",
-      "value": numeric value (use 0 for "<LOD" or undetectable),
-      "units": "units if shown",
-      "reference": "reference range if shown"
-    }
+    {"marker_name": "exact name", "value": number, "units": "units", "reference": "range"}
   ],
   "genetics": [
-    {
-      "rsid": "rs1801133",
-      "gene": "MTHFR",
-      "mutation": "C/C",
-      "risk": "Normal" or "Elevated" or "Partially elevated",
-      "reference": "reference genotype"
-    }
+    {"rsid": "rs1801133", "gene": "MTHFR", "mutation": "C/C", "risk": "Normal"}
   ]
 }
 
-EXTRACTION RULES:
-1. For BIOMARKERS: Extract the Current value, not Previous. Use 0 for "<" values.
-2. For GENETICS: Look for tables with "Test Name", "Gene Name", "Your Mutation", "Your Risk"
-   - The rsID looks like "rs" followed by numbers (e.g., rs1801133)
-   - Extract ALL SNPs from Antioxidant Genetics or Methylation sections
-3. The report_id is the "Accession ID" from the header (10-digit number)
-4. Return ONLY valid JSON, no markdown code blocks
-
-Extract all biomarkers and ALL genetics/SNPs from this PDF:`;
+RULES:
+- Use 0 for "<LOD" or undetectable values
+- Extract ALL SNPs from genetics tables (rsID starts with "rs")
+- Return ONLY the JSON, no other text`;
 
     const response = await client.messages.create({
-      model: 'claude-sonnet-4-20250514',  // Using Sonnet for accuracy
+      model: 'claude-3-5-haiku-20241022',  // Using Haiku for speed (Pro plan 26s limit)
       max_tokens: 16000,
       messages: [
         {
