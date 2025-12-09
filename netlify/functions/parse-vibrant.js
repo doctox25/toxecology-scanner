@@ -346,6 +346,14 @@ Use 0 for "<LOD". Return ONLY JSON.`;
     }
 
     console.log(`[Vibrant Parser] Total markers: ${allMarkers.length}`);
+    
+    // Debug: log first 3 marker structures
+    if (allMarkers.length > 0) {
+      console.log('[Vibrant Parser] Sample marker structures:');
+      for (let i = 0; i < Math.min(3, allMarkers.length); i++) {
+        console.log(`  Marker ${i}: ${JSON.stringify(allMarkers[i]).substring(0, 200)}`);
+      }
+    }
 
     // ========================================================================
     // PROCESS RESULTS
@@ -357,14 +365,24 @@ Use 0 for "<LOD". Return ONLY JSON.`;
 
     // Process biomarkers (deduplicate)
     for (const marker of allMarkers) {
-      const markerId = normalizeMarkerName(marker.marker_name);
+      // Handle different property names for marker name
+      const rawName = marker.marker_name || marker.name || marker.compound || marker.analyte || marker.test || '';
+      
+      if (!rawName) {
+        console.log('[Vibrant Parser] Marker missing name:', JSON.stringify(marker).substring(0, 100));
+        continue;
+      }
+      
+      const markerId = normalizeMarkerName(rawName);
       
       // Skip duplicates
       if (seenMarkers.has(markerId)) continue;
       seenMarkers.add(markerId);
       
-      const value = typeof marker.value === 'number' ? marker.value : 
-                    parseFloat(String(marker.value).replace(/[<>]/g, '')) || 0;
+      // Handle different property names for value
+      const rawValue = marker.value ?? marker.result ?? marker.level ?? marker.concentration ?? 0;
+      const value = typeof rawValue === 'number' ? rawValue : 
+                    parseFloat(String(rawValue).replace(/[<>]/g, '')) || 0;
 
       results.push({
         result_id: `${reportId}-${panelType}-${String(idx).padStart(3, '0')}`,
