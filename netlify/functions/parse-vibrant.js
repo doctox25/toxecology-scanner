@@ -496,11 +496,17 @@ exports.handler = async function (event) {
     // EXTRACTION PROMPT - Handles biomarkers AND genetics
     // ========================================================================
     
-    const prompt = `Extract ALL lab results from this Vibrant Wellness PDF. Return ONLY valid JSON.
+    const prompt = `Extract EVERY SINGLE lab result from this Vibrant Wellness PDF. This is critical - do NOT skip any markers.
 
 The PDF contains:
 1. BIOMARKERS - numeric test results (e.g., "Arsenic: 4.61")  
 2. GENETICS/SNPs - genetic variants (e.g., "rs1801133 MTHFR C/C Normal")
+
+IMPORTANT: Total Tox panels have 100+ markers across these categories - extract ALL of them:
+- Mycotoxins (Aflatoxins, Ochratoxin, Gliotoxin, Fumonisins, Trichothecenes, etc.)
+- Heavy Metals (Aluminum, Arsenic, Cadmium, Lead, Mercury, etc. - about 20 metals)
+- PFAS (PFOA, PFOS, GenX, etc. - about 15-20 compounds)
+- Environmental Pollutants (BPA, Triclosan, Phthalates, Parabens, VOCs, Pesticides)
 
 Return this EXACT JSON structure:
 
@@ -516,8 +522,9 @@ Return this EXACT JSON structure:
 }
 
 RULES:
+- Extract EVERY marker from EVERY page - do not summarize or skip
 - Use 0 for "<LOD" or undetectable values
-- Extract ALL SNPs from genetics tables (rsID starts with "rs")
+- Total Tox should have 100+ markers - if you have fewer, you missed some
 - Return ONLY the JSON, no other text`;
 
     const response = await client.messages.create({
