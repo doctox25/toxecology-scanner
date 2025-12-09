@@ -226,37 +226,83 @@ exports.handler = async function (event) {
     // PARALLEL EXTRACTION FOR TOX PANELS
     // ========================================================================
     
-    const pass1Prompt = `Extract lab results from this Vibrant Wellness PDF.
+    const pass1Prompt = `Extract lab results from this Vibrant Wellness Total Tox PDF.
 
-Identify panel type: TOX (mycotoxins/metals/PFAS), OX (oxidative stress), or METH (methylation)
+CRITICAL: Extract EVERY marker with its numeric value. Use 0 for "<LOD" or "Not Detected".
 
-For this pass, extract:
-- Report ID (accession number)
-- Panel type
-- Mycotoxins (all Aflatoxins, Ochratoxin, Gliotoxin, Citrinin, Fumonisins, Trichothecenes, Roridins, Satratoxins, Verrucarins)
-- Heavy Metals (all 20: Aluminum through Uranium)
-- PFAS compounds (all perfluoro compounds)
-- Any genetics/SNPs
+I need:
+1. Report ID (accession number near top)
+2. Panel type: "TOX"
+
+3. MYCOTOXINS section - extract ALL:
+   Aflatoxin B1, B2, G1, G2, M1
+   Ochratoxin A, Gliotoxin, Mycophenolic Acid, Sterigmatocystin, Zearalenone
+   Citrinin, Dihydrocitrinone, Chaetoglobosin A, Enniatin B, B1, A1
+   Fumonisin B1, B2, B3, Patulin
+   Deoxynivalenol (DON), Nivalenol (NIV), Diacetoxyscirpenol
+   T-2 Toxin
+   Roridin A, E, L-2, Satratoxin G, H, Verrucarin A, J, Verrucarol
+
+4. HEAVY METALS section - extract ALL:
+   Aluminum, Antimony, Arsenic, Barium, Beryllium, Bismuth
+   Cadmium, Cesium, Gadolinium, Lead, Mercury, Nickel
+   Palladium, Platinum, Tellurium, Thallium, Thorium, Tin, Tungsten, Uranium
+
+5. PFAS section - extract ALL:
+   GenX, PFOA, PFOS, PFBA, PFDA, PFDOA, PFHPA, PFHXA, PFHXS
+   PFNA, PFPEA, PFTEDA, PFTRDA, PFUNA, and any other perfluoro compounds
+
+Return JSON with this EXACT structure:
+{
+  "report_id": "NUMBER",
+  "panel_type": "TOX",
+  "markers": [
+    {"marker_name": "Aflatoxin B1", "value": 0.5},
+    {"marker_name": "Lead", "value": 1.2},
+    {"marker_name": "PFOA", "value": 0.8}
+  ],
+  "genetics": []
+}
+
+List EACH marker as a separate object. Return ONLY valid JSON, no markdown.`;
+
+    const pass2Prompt = `Extract lab results from this Vibrant Wellness Total Tox PDF.
+
+CRITICAL: Extract EVERY marker with its numeric value. Use 0 for "<LOD" or "Not Detected".
+
+Extract ONLY these sections:
+
+1. ENVIRONMENTAL PHENOLS:
+   4-Nonylphenol, Bisphenol A (BPA), Triclosan
+
+2. PESTICIDES/HERBICIDES:
+   2,4-Dichlorophenoxyacetic acid (2,4-D), Atrazine, Atrazine Mercapturate
+   Glyphosate, DDA, 3-Phenoxybenzoic acid (3-PBA)
+   Organophosphates: DEP, DEDTP, DETP, DMP, DMDTP, DMTP
+
+3. PHTHALATES:
+   MEHHP, MEOHP, MEHP, METP (mono-ethyl phthalate)
+
+4. PARABENS:
+   Methylparaben, Ethylparaben, Propylparaben, Butylparaben
+
+5. VOCs:
+   2-Hydroxyethyl mercapturic acid, 2-Hydroxyisobutyric acid
+   2-Methylhippuric acid, 3-Methylhippuric acid, 4-Methylhippuric acid
+   N-Acetyl compounds, Phenyl glyoxylic acid
+
+6. OTHER:
+   Perchlorate, Tiglylglycine, Diphenyl phosphate (DPP)
 
 Return JSON:
-{"report_id": "ID", "panel_type": "TOX/OX/METH", "markers": [{"marker_name": "name", "value": number}], "genetics": [{"rsid": "rs...", "gene": "X", "mutation": "X/X", "risk": "Normal"}]}
+{
+  "markers": [
+    {"marker_name": "4-Nonylphenol", "value": 0.17},
+    {"marker_name": "Glyphosate", "value": 0.05}
+  ]
+}
 
-Use 0 for "<LOD". Return ONLY JSON.`;
-
-    const pass2Prompt = `Extract lab results from this Vibrant Wellness PDF.
-
-For this pass, extract ONLY these categories:
-- Environmental Phenols (4-Nonylphenol, BPA, Triclosan)
-- Pesticides/Herbicides (2,4-D, Atrazine, Glyphosate, 3-PBA, all organophosphates)
-- Phthalates (MEHHP, MEOHP, MEHP, METP)
-- Parabens (Methyl, Ethyl, Propyl, Butyl)
-- VOCs (all hippuric acids, mercapturic acids, etc.)
-- Other markers (Perchlorate, Tiglylglycine, DPP)
-
-Return JSON:
-{"markers": [{"marker_name": "name", "value": number}]}
-
-Use 0 for "<LOD". Return ONLY JSON.`;
+List EACH marker as a separate object. Return ONLY valid JSON, no markdown.`;
 
     console.log('[Vibrant Parser] Starting parallel extraction...');
     
@@ -292,6 +338,21 @@ Use 0 for "<LOD". Return ONLY JSON.`;
     console.log('[Vibrant Parser] Pass 1 raw keys:', parsed1 ? Object.keys(parsed1) : 'null');
     console.log('[Vibrant Parser] Pass 2 raw keys:', parsed2 ? Object.keys(parsed2) : 'null');
     
+    // Debug: log raw response snippet if markers are empty
+    if (parsed1 && (!parsed1.markers || parsed1.markers.length === 0)) {
+      console.log('[Vibrant Parser] Pass 1 markers empty! Checking structure...');
+      for (const key of Object.keys(parsed1)) {
+        const val = parsed1[key];
+        if (Array.isArray(val)) {
+          console.log(`  ${key}: Array with ${val.length} items`);
+        } else if (typeof val === 'object' && val !== null) {
+          console.log(`  ${key}: Object with keys: ${Object.keys(val).join(', ')}`);
+        } else {
+          console.log(`  ${key}: ${typeof val} = ${String(val).substring(0, 50)}`);
+        }
+      }
+    }
+    
     if (!parsed1) {
       console.error('[Vibrant Parser] Pass 1 parse failed');
       console.log('[Vibrant Parser] Pass 1 raw:', response1.content[0].text.substring(0, 500));
@@ -302,30 +363,50 @@ Use 0 for "<LOD". Return ONLY JSON.`;
       };
     }
 
-    // Helper to extract markers from various possible keys
-    function extractMarkers(obj) {
-      if (!obj) return [];
+    // Helper to extract markers from various possible keys (recursive)
+    function extractMarkers(obj, depth = 0) {
+      if (!obj || depth > 3) return [];
       
       let markers = [];
       
       // Check for direct markers array
       if (Array.isArray(obj.markers)) markers.push(...obj.markers);
       
-      // Check for category-specific arrays
-      const categoryKeys = ['mycotoxins', 'heavy_metals', 'metals', 'pfas', 'pfas_compounds',
-                           'environmental', 'environmental_phenols', 'pesticides', 'herbicides',
-                           'phthalates', 'parabens', 'vocs', 'other', 'other_markers',
-                           'environmental_pollutants', 'organophosphates'];
+      // Check for category-specific arrays - expanded list
+      const categoryKeys = [
+        'mycotoxins', 'mycotoxin', 'aflatoxins', 'ochratoxin', 'trichothecenes',
+        'heavy_metals', 'metals', 'toxic_metals',
+        'pfas', 'pfas_compounds', 'forever_chemicals',
+        'environmental', 'environmental_phenols', 'phenols',
+        'pesticides', 'herbicides', 'organophosphates',
+        'phthalates', 'parabens', 'vocs', 'volatile_compounds',
+        'other', 'other_markers', 'additional',
+        'biomarkers', 'results', 'analytes', 'compounds', 'tests'
+      ];
       
       for (const key of categoryKeys) {
         if (Array.isArray(obj[key])) {
           markers.push(...obj[key]);
+        } else if (obj[key] && typeof obj[key] === 'object' && !Array.isArray(obj[key])) {
+          // Recurse into nested objects
+          markers.push(...extractMarkers(obj[key], depth + 1));
         }
       }
       
       // If obj itself is an array of markers
       if (Array.isArray(obj)) {
         markers.push(...obj);
+      }
+      
+      // Check for any array property we might have missed
+      if (depth === 0) {
+        for (const key of Object.keys(obj)) {
+          if (Array.isArray(obj[key]) && !categoryKeys.includes(key) && 
+              key !== 'genetics' && obj[key].length > 0) {
+            console.log(`[Vibrant Parser] Found additional array: ${key} with ${obj[key].length} items`);
+            markers.push(...obj[key]);
+          }
+        }
       }
       
       return markers;
