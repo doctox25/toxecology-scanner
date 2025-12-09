@@ -5,17 +5,11 @@
 [functions]
   node_bundler = "esbuild"
 
-[[functions]]
-  path = "/parse-tribal"
-  schedule = ""
+[functions."parse-vibrant"]
   timeout = 60
 
-[[functions]]
-  path = "/parse-vibrant"
-  schedule = ""
-  timeout = 60
-
-[[functions]]
-  path = "/product-lookup"
-  schedule = ""
+[functions."product-lookup"]
   timeout = 15
+
+[functions."parse-tribal"]
+  timeout = 60
