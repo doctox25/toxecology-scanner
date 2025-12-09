@@ -6,10 +6,10 @@
   node_bundler = "esbuild"
 
 [functions."parse-vibrant"]
-  timeout = 60
+  timeout = 120
 
 [functions."product-lookup"]
   timeout = 15
 
 [functions."parse-tribal"]
-  timeout = 60
+  timeout = 120
