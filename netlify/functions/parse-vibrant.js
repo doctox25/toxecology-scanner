@@ -223,112 +223,95 @@ exports.handler = async function (event) {
     const client = new Anthropic();
     
     // ========================================================================
-    // FIRST PASS - Detect panel type and extract first batch
+    // PARALLEL EXTRACTION FOR TOX PANELS
     // ========================================================================
     
-    const firstPassPrompt = `Analyze this Vibrant Wellness PDF and extract lab results.
+    const pass1Prompt = `Extract lab results from this Vibrant Wellness PDF.
 
-First, identify the panel type:
-- "TOX" = Total Tox Burden (has mycotoxins, heavy metals, PFAS, environmental toxins)
-- "OX" = Oxidative Stress (has prostaglandins, DNA damage markers, protein oxidation)
-- "METH" = Methylation (has homocysteine, B12, folate, MTHFR genetics)
+Identify panel type: TOX (mycotoxins/metals/PFAS), OX (oxidative stress), or METH (methylation)
 
-Then extract ALL biomarkers and genetics.
-
-For TOX panels, extract these categories in this pass:
-- ALL Mycotoxins (Aflatoxins B1/B2/G1/G2/M1, Ochratoxin A, Gliotoxin, Citrinin, Fumonisins, Trichothecenes like T-2, Roridins, Satratoxins, Verrucarins, etc.)
-- ALL Heavy Metals (Aluminum, Antimony, Arsenic, Barium, Beryllium, Bismuth, Cadmium, Cesium, Gadolinium, Lead, Mercury, Nickel, Palladium, Platinum, Tellurium, Thallium, Thorium, Tin, Tungsten, Uranium)
-- ALL PFAS compounds
+For this pass, extract:
+- Report ID (accession number)
+- Panel type
+- Mycotoxins (all Aflatoxins, Ochratoxin, Gliotoxin, Citrinin, Fumonisins, Trichothecenes, Roridins, Satratoxins, Verrucarins)
+- Heavy Metals (all 20: Aluminum through Uranium)
+- PFAS compounds (all perfluoro compounds)
+- Any genetics/SNPs
 
 Return JSON:
-{
-  "report_id": "accession ID",
-  "panel_type": "TOX" or "OX" or "METH",
-  "markers": [{"marker_name": "exact name", "value": number, "units": "units", "reference": "range"}],
-  "genetics": [{"rsid": "rs...", "gene": "GENE", "mutation": "X/X", "risk": "Normal/Elevated"}]
-}
+{"report_id": "ID", "panel_type": "TOX/OX/METH", "markers": [{"marker_name": "name", "value": number}], "genetics": [{"rsid": "rs...", "gene": "X", "mutation": "X/X", "risk": "Normal"}]}
 
-Use 0 for "<LOD" values. Return ONLY valid JSON.`;
+Use 0 for "<LOD". Return ONLY JSON.`;
 
-    console.log('[Vibrant Parser] Starting first pass extraction...');
-    
-    const firstResponse = await client.messages.create({
-      model: 'claude-3-5-haiku-20241022',
-      max_tokens: 8192,
-      messages: [{
-        role: 'user',
-        content: [
-          { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: pdfBase64 } },
-          { type: 'text', text: firstPassPrompt }
-        ]
-      }]
-    });
+    const pass2Prompt = `Extract lab results from this Vibrant Wellness PDF.
 
-    const firstParsed = tryParseJSON(firstResponse.content[0].text);
-    
-    if (!firstParsed) {
-      console.error('[Vibrant Parser] First pass parse failed');
-      return {
-        statusCode: 500,
-        headers: { 'Access-Control-Allow-Origin': '*' },
-        body: JSON.stringify({ error: 'Failed to parse first pass response' })
-      };
-    }
-
-    const reportId = firstParsed.report_id || 'UNKNOWN';
-    const panelType = firstParsed.panel_type || 'VIB';
-    let allMarkers = firstParsed.markers || [];
-    let allGenetics = firstParsed.genetics || [];
-
-    console.log(`[Vibrant Parser] First pass - Report ID: ${reportId}, Panel: ${panelType}`);
-    console.log(`[Vibrant Parser] First pass - Got ${allMarkers.length} markers, ${allGenetics.length} SNPs`);
-
-    // ========================================================================
-    // SECOND PASS - Only for TOX panels, get remaining categories
-    // ========================================================================
-    
-    if (panelType === 'TOX' && allMarkers.length < 80) {
-      console.log('[Vibrant Parser] TOX panel detected with incomplete data, running second pass...');
-      
-      const secondPassPrompt = `This is the SAME Vibrant Wellness Total Tox PDF. I need you to extract the REMAINING markers that were not in the first batch.
-
-Extract ONLY these categories (skip mycotoxins, heavy metals, and PFAS - already extracted):
+For this pass, extract ONLY these categories:
 - Environmental Phenols (4-Nonylphenol, BPA, Triclosan)
-- Herbicides & Pesticides (2,4-D, Atrazine, Glyphosate, DDA, 3-PBA, all phosphates DEP/DETP/DMP/DMTP etc.)
+- Pesticides/Herbicides (2,4-D, Atrazine, Glyphosate, 3-PBA, all organophosphates)
 - Phthalates (MEHHP, MEOHP, MEHP, METP)
 - Parabens (Methyl, Ethyl, Propyl, Butyl)
-- VOCs (2-HEMA, 2-HIB, 2-MHA, 3-MHA, 4-MHA, NACE, NAHP, NADC, NAPR, NAP, PGO)
-- Other (Perchlorate, Tiglylglycine, DPP, NASC)
+- VOCs (all hippuric acids, mercapturic acids, etc.)
+- Other markers (Perchlorate, Tiglylglycine, DPP)
 
-Return JSON with same structure:
-{
-  "markers": [{"marker_name": "exact name", "value": number, "units": "units", "reference": "range"}]
-}
+Return JSON:
+{"markers": [{"marker_name": "name", "value": number}]}
 
-Use 0 for "<LOD" values. Return ONLY the JSON for these additional markers.`;
+Use 0 for "<LOD". Return ONLY JSON.`;
 
-      const secondResponse = await client.messages.create({
+    console.log('[Vibrant Parser] Starting parallel extraction...');
+    
+    // Run both passes simultaneously
+    const [response1, response2] = await Promise.all([
+      client.messages.create({
         model: 'claude-3-5-haiku-20241022',
         max_tokens: 8192,
         messages: [{
           role: 'user',
           content: [
             { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: pdfBase64 } },
-            { type: 'text', text: secondPassPrompt }
+            { type: 'text', text: pass1Prompt }
           ]
         }]
-      });
+      }),
+      client.messages.create({
+        model: 'claude-3-5-haiku-20241022',
+        max_tokens: 8192,
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: pdfBase64 } },
+            { type: 'text', text: pass2Prompt }
+          ]
+        }]
+      })
+    ]);
 
-      const secondParsed = tryParseJSON(secondResponse.content[0].text);
-      
-      if (secondParsed && secondParsed.markers) {
-        console.log(`[Vibrant Parser] Second pass - Got ${secondParsed.markers.length} additional markers`);
-        allMarkers = [...allMarkers, ...secondParsed.markers];
-      }
+    const parsed1 = tryParseJSON(response1.content[0].text);
+    const parsed2 = tryParseJSON(response2.content[0].text);
+    
+    if (!parsed1) {
+      console.error('[Vibrant Parser] Pass 1 parse failed');
+      return {
+        statusCode: 500,
+        headers: { 'Access-Control-Allow-Origin': '*' },
+        body: JSON.stringify({ error: 'Failed to parse pass 1 response' })
+      };
     }
 
-    console.log(`[Vibrant Parser] Total markers after all passes: ${allMarkers.length}`);
-    console.log(`[Vibrant Parser] Total SNPs: ${allGenetics.length}`);
+    const reportId = parsed1.report_id || 'UNKNOWN';
+    const panelType = parsed1.panel_type || 'VIB';
+    let allMarkers = parsed1.markers || [];
+    let allGenetics = parsed1.genetics || [];
+
+    console.log(`[Vibrant Parser] Pass 1 - Report ID: ${reportId}, Panel: ${panelType}, Markers: ${allMarkers.length}`);
+
+    // Add pass 2 markers
+    if (parsed2 && parsed2.markers) {
+      console.log(`[Vibrant Parser] Pass 2 - Got ${parsed2.markers.length} additional markers`);
+      allMarkers = [...allMarkers, ...parsed2.markers];
+    }
+
+    console.log(`[Vibrant Parser] Total markers: ${allMarkers.length}`);
 
     // ========================================================================
     // PROCESS RESULTS
