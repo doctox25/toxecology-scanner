@@ -325,7 +325,7 @@
         <h2>Extracted Results</h2>
         <div class="btn-group">
           <button class="copy-btn" id="copyBtn">📋 Copy TSV</button>
-          <button class="download-btn" id="downloadBtn">⬇️ Download TSV</button>
+          <button class="download-btn" id="downloadBtn">⬇️ Download CSV</button>
         </div>
       </div>
       
@@ -510,23 +510,23 @@
       });
     });
     
-    // Download button handler
+    // Download button handler - CSV format
     downloadBtn.addEventListener('click', () => {
       if (extractedResults.length === 0) return;
       
-      // Create TSV with headers
+      // Create CSV with headers
       const headers = ['result_id', 'report_id', 'patient_id', 'marker_id_inbox', 'value'];
       const rows = extractedResults.map(r => 
-        [r.result_id, r.report_id, r.patient_id || '', r.marker_id_inbox, r.value].join('\t')
+        [r.result_id, r.report_id, r.patient_id || '', r.marker_id_inbox, r.value].map(v => `"${v}"`).join(',')
       );
-      const tsv = headers.join('\t') + '\n' + rows.join('\n');
+      const csv = headers.join(',') + '\n' + rows.join('\n');
       
       // Create download
-      const blob = new Blob([tsv], { type: 'text/tab-separated-values' });
+      const blob = new Blob([csv], { type: 'text/csv' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `vibrant_results_${reportIdInput.value || 'export'}.tsv`;
+      a.download = `vibrant_results_${reportIdInput.value || 'export'}.csv`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -534,7 +534,7 @@
       
       downloadBtn.textContent = '✅ Downloaded!';
       setTimeout(() => {
-        downloadBtn.textContent = '⬇️ Download TSV';
+        downloadBtn.textContent = '⬇️ Download CSV';
       }, 2000);
     });
     
